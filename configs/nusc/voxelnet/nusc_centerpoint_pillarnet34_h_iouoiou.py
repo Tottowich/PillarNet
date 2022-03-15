@@ -18,7 +18,7 @@ class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
 target_assigner = dict(
     tasks=tasks,
 )
-
+DOUBLE_FLIP = False
 # model settings
 model = dict(
     type="PillarNet",
@@ -84,7 +84,8 @@ test_cfg = dict(
     rectifier=0.5,
     pc_range=[-54, -54],
     out_size_factor=get_downsample_factor(model),
-    voxel_size=[0.075, 0.075]
+    voxel_size=[0.075, 0.075],
+    double_flip=DOUBLE_FLIP
 )
 
 # dataset settings
@@ -149,6 +150,7 @@ voxel_generator = dict(
     voxel_size=[0.075, 0.075, 0.2],
     max_points_in_voxel=10,
     max_voxel_num=[120000, 160000],
+    double_flip=DOUBLE_FLIP
 )
 
 train_pipeline = [
@@ -164,14 +166,15 @@ test_pipeline = [
     dict(type="LoadPointCloudFromFile", dataset=dataset_type),
     dict(type="LoadPointCloudAnnotations", with_bbox=True),
     dict(type="Preprocess", cfg=val_preprocessor),
+    dict(type="DoubleFlip") if DOUBLE_FLIP else dict(type="Empty"),
     dict(type="Voxelization", cfg=voxel_generator),
     dict(type="AssignLabel", cfg=train_cfg["assigner"]),
-    dict(type="Reformat"),
+    dict(type="Reformat", double_flip=DOUBLE_FLIP),
 ]
 
 train_anno = "data/nuScenes/infos_train_10sweeps_withvelo_filter_True.pkl"
 val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
-test_anno = None
+test_anno = "data/nuScenes/infos_test_10sweeps_withvelo.pkl"
 
 data = dict(
     samples_per_gpu=4,
@@ -199,10 +202,12 @@ data = dict(
         type=dataset_type,
         root_path=data_root,
         info_path=test_anno,
+        test_mode=True,
         ann_file=test_anno,
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,
+        version='v1.0-test'
     ),
 )
 

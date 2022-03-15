@@ -171,7 +171,7 @@ test_pipeline = [
 
 train_anno = "data/nuScenes/infos_train_10sweeps_withvelo_filter_True.pkl"
 val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
-test_anno = None
+test_anno = "data/nuScenes/infos_test_10sweeps_withvelo.pkl"
 
 data = dict(
     samples_per_gpu=4,
@@ -201,8 +201,10 @@ data = dict(
         info_path=test_anno,
         ann_file=test_anno,
         nsweeps=nsweeps,
+        test_mode=True,
         class_names=class_names,
         pipeline=test_pipeline,
+        version='v1.0-test'
     ),
 )
 
