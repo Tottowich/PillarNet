@@ -370,10 +370,10 @@ class Trainer(object):
         self.call_hook("after_data_to_device")
 
         if train_mode:
-            from thop import profile, clever_format
+            # from thop import profile, clever_format
             losses = model(example, return_loss=True)
-            macs, params = profile(model, inputs=(example,))
-            macs, params = clever_format([macs, params], "%.3f")
+            # macs, params = profile(model, inputs=(example,))
+            # macs, params = clever_format([macs, params], "%.3f")
 
             self.call_hook("after_forward")
             loss, log_vars = parse_second_losses(losses)
