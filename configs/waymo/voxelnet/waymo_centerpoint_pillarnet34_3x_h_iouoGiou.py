@@ -20,7 +20,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddlePillarEncoder34HA", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -38,14 +38,14 @@ model = dict(
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
-        type="CenterHead",
+        type="CenterIoUHead",
         in_channels=256,
         tasks=tasks,
         dataset='waymo',
         weight=2,
-        # reg_type="IoU",  # IoU GIoU DIoU ODoU
+        reg_type="GIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
+        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'iou':(1, 2)}, # (output_channel, num_conv)
     ),
 )
 
@@ -72,12 +72,13 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 100, 100],
+        nms_post_max_size=[300, 200, 200],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
+    rectifier=[0.68, 0.71, 0.65],
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
-    out_size_factor=get_downsample_factor(model),
+    # out_size_factor=get_downsample_factor(model),
     voxel_size=[0.1, 0.1],
 )
 
@@ -151,11 +152,11 @@ test_pipeline = [
 
 train_anno = "data/Waymo/infos_train_01sweeps_filter_zero_gt.pkl"
 val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
-test_anno = None
+test_anno = "data/Waymo/infos_test_01sweeps_filter_zero_gt.pkl"
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=4,
+    workers_per_gpu=8,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -164,7 +165,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=train_pipeline,
-        load_interval=4
+        load_interval=1
     ),
     val=dict(
         type=dataset_type,
@@ -181,6 +182,7 @@ data = dict(
         root_path=data_root,
         info_path=test_anno,
         ann_file=test_anno,
+        test_mode=True,
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,

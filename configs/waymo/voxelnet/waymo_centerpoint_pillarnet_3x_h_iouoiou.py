@@ -20,7 +20,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddlePillarEncoder34HA", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -28,18 +28,18 @@ model = dict(
         ),
     ),
     neck=dict(
-        type="RPNV3",
+        type="RPNV2",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
         ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
-        us_num_filters=[256, 256],
+        us_num_filters=[128, 128],
         num_input_features=[256, 256],
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
         type="CenterIoUHead",
-        in_channels=512,
+        in_channels=256,
         tasks=tasks,
         dataset='waymo',
         weight=2,
@@ -155,8 +155,8 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=4,
+    samples_per_gpu=4,
+    workers_per_gpu=8,
     train=dict(
         type=dataset_type,
         root_path=data_root,

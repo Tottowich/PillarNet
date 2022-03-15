@@ -20,7 +20,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddlePillarEncoderHA", num_input_features=3, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -38,14 +38,15 @@ model = dict(
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
-        type="CenterHead",
+        type="CenterIoUHead",
         in_channels=256,
         tasks=tasks,
         dataset='waymo',
         weight=2,
-        # reg_type="IoU",  # IoU GIoU DIoU ODoU
-        code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
+        reg_type="GIoU",  # IoU GIoU DIoU ODoU
+        code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 1.0, 1.0],
+        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim': (3, 2), 'rot': (2, 2), 'vel': (2, 2), 'iou': (1, 2)},
+        # (output_channel, num_conv)
     ),
 )
 
@@ -60,6 +61,7 @@ assigner = dict(
     voxel_size=[0.1, 0.1, 0.15],
 )
 
+
 train_cfg = dict(assigner=assigner)
 
 
@@ -72,25 +74,26 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 100, 100],
+        nms_post_max_size=[300, 150, 150],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
+    rectifier=[0.68, 0.71, 0.65],
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
-    out_size_factor=get_downsample_factor(model),
+    # out_size_factor=get_downsample_factor(model),
     voxel_size=[0.1, 0.1],
 )
 
 
 # dataset settings
 dataset_type = "WaymoDataset"
-nsweeps = 1
+nsweeps = 2
 data_root = "data/Waymo"
 
 db_sampler = dict(
     type="GT-AUG",
     enable=False,
-    db_info_path="data/Waymo/dbinfos_train_1sweeps_withvelo.pkl",
+    db_info_path="data/Waymo/dbinfos_train_2sweeps_withvelo.pkl",
     sample_groups=[
         dict(VEHICLE=15),
         dict(PEDESTRIAN=10),
@@ -108,7 +111,7 @@ db_sampler = dict(
     ],
     global_random_rotation_range_per_object=[0, 0],
     rate=1.0,
-    extra_scale=1.,
+    extra_scale=1.
 ) 
 
 train_preprocessor = dict(
@@ -129,7 +132,7 @@ voxel_generator = dict(
     range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
     voxel_size=[0.1, 0.1, 0.15],
     max_points_in_voxel=5,
-    max_voxel_num=[150000, 200000],
+    max_voxel_num=[180000, 400000],
 )
 
 train_pipeline = [
@@ -149,13 +152,13 @@ test_pipeline = [
     dict(type="Reformat"),
 ]
 
-train_anno = "data/Waymo/infos_train_01sweeps_filter_zero_gt.pkl"
-val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
-test_anno = None
+train_anno = "data/Waymo/infos_train_02sweeps_filter_zero_gt.pkl"
+val_anno = "data/Waymo/infos_val_02sweeps_filter_zero_gt.pkl"
+test_anno = "data/Waymo/infos_test_02sweeps_filter_zero_gt.pkl"
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=4,
+    workers_per_gpu=8,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -164,7 +167,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=train_pipeline,
-        load_interval=4
+        load_interval=1
     ),
     val=dict(
         type=dataset_type,
@@ -181,6 +184,7 @@ data = dict(
         root_path=data_root,
         info_path=test_anno,
         ann_file=test_anno,
+        test_mode=True,
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,

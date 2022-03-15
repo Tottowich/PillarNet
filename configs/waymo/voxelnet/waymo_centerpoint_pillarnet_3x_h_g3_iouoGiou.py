@@ -4,7 +4,8 @@ import logging
 from det3d.utils.config_tool import get_downsample_factor
 
 tasks = [
-    dict(stride=8, class_names=['VEHICLE', 'PEDESTRIAN', 'CYCLIST']),
+    dict(stride=8, class_names=['VEHICLE']),
+    dict(stride=4, class_names=['PEDESTRIAN', 'CYCLIST']),
 ]
 
 class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
@@ -28,7 +29,7 @@ model = dict(
         ),
     ),
     neck=dict(
-        type="RPNV2",
+        type="RPNG3",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
         ds_num_filters=[256, 256],
@@ -38,14 +39,15 @@ model = dict(
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
-        type="CenterHead",
-        in_channels=256,
+        type="CenterIoUMultiHead",
+        in_channels=64,
         tasks=tasks,
         dataset='waymo',
         weight=2,
-        # reg_type="IoU",  # IoU GIoU DIoU ODoU
+        reg_type="GIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
+        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim': (3, 2), 'rot': (2, 2), 'iou': (1, 2)},
+        # (output_channel, num_conv)
     ),
 )
 
@@ -72,12 +74,13 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 100, 100],
+        nms_post_max_size=[300, 150, 150],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
+    rectifier=[0.68, 0.71, 0.65],
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
-    out_size_factor=get_downsample_factor(model),
+    # out_size_factor=get_downsample_factor(model),
     voxel_size=[0.1, 0.1],
 )
 
@@ -155,7 +158,7 @@ test_anno = None
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=4,
+    workers_per_gpu=8,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -164,7 +167,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=train_pipeline,
-        load_interval=4
+        load_interval=1
     ),
     val=dict(
         type=dataset_type,
