@@ -383,7 +383,7 @@ class CenterHead(nn.Module):
             batch_dim = torch.exp(preds_dict['dim'])
             if 'iou' in preds_dict.keys():
                 batch_iou = (preds_dict['iou'].squeeze(dim=-1) + 1) * 0.5
-                batch_iou = batch_iou.type_as(batch_dim.dtype)
+                batch_iou = batch_iou.type_as(batch_dim)
             else:
                 batch_iou = torch.ones((batch_hm.shape[0], batch_hm.shape[1], batch_hm.shape[2]),
                                         dtype=batch_dim.dtype).to(batch_hm.device)

@@ -201,10 +201,10 @@ class PillarQueryAndGroupV2a(nn.Module):
         group_pillar_centers = gather_feature(pillar_centers, pillar_set_indices)  # (L, 3)  [xyz]
         group_pillar_centers = group_point_xyz - group_pillar_centers
 
-        group_point_xyz = relative_to_absl(group_point_xyz, self.point_cloud_range)
+        # group_point_xyz = relative_to_absl(group_point_xyz, self.point_cloud_range)
 
         # group_features = torch.cat([group_point_features, group_point_xyz - group_pillar_centers], dim=1)
-        group_features = torch.cat([group_point_features, group_point_xyz.detach(), group_pillar_centers.detach()], dim=1)
+        group_features = torch.cat([group_point_features, group_pillar_centers.detach()], dim=1)
 
         return pillars, pillar_set_indices, group_features
 

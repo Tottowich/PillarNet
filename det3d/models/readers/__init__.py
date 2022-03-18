@@ -31,20 +31,17 @@ class Identity(nn.Module):
 
     def forward(self, example, **kwargs):
         points_list = example.pop("points")
-
         device = points_list[0].device
 
         xyz = []
-        pt_features = []
         xyz_batch_cnt = []
         for points in points_list:
             points = self.absl_to_relative(points)
 
             xyz_batch_cnt.append(len(points))
             xyz.append(points[:, :3])
-            pt_features.append(points[:, 3:])
 
         example["xyz"] = torch.cat(xyz, dim=0).contiguous()
-        example["pt_features"] = torch.cat(pt_features, dim=0).contiguous()
+        example["pt_features"] = torch.cat(points_list, dim=0).contiguous()
         example["xyz_batch_cnt"] = torch.tensor(xyz_batch_cnt, dtype=torch.int32).to(device)
         return example

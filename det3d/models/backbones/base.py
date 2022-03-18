@@ -11,6 +11,7 @@ except:
 from timm.models.layers import DropPath
 from ..utils import build_norm_layer
 
+
 def replace_feature(out, new_features):
     if "replace_feature" in out.__dir__():
         # spconv 2.x behaviour
@@ -601,3 +602,5 @@ class Sparse2DMerge(spconv.SparseModule):
 
         x = replace_feature(x, x.features + pool)
         return x
+
+
