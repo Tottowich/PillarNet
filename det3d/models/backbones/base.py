@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch import nn
+
 try:
     import spconv.pytorch as spconv
     from spconv.pytorch import ops
@@ -118,6 +119,7 @@ def conv2D1x1(in_planes, out_planes, bias=False):
             # indice_key=indice_key,
         )
 
+
 class Sparse2DBasicBlock(spconv.SparseModule):
     expansion = 1
 
@@ -126,7 +128,6 @@ class Sparse2DBasicBlock(spconv.SparseModule):
         inplanes,
         planes,
         stride=1,
-        dilation=1,
         norm_cfg=None,
         indice_key=None,
     ):
@@ -137,7 +138,7 @@ class Sparse2DBasicBlock(spconv.SparseModule):
         bias = norm_cfg is not None
 
         self.conv1 = spconv.SparseSequential(
-            conv2D3x3(inplanes, planes, stride, dilation=dilation, indice_key=indice_key, bias=bias),
+            conv2D3x3(planes, planes, stride, indice_key=indice_key, bias=bias),
             build_norm_layer(norm_cfg, planes)[1]
         )
         self.conv2 = spconv.SparseSequential(
@@ -145,7 +146,6 @@ class Sparse2DBasicBlock(spconv.SparseModule):
             build_norm_layer(norm_cfg, planes)[1]
         )
         self.relu = nn.ReLU()
-        self.stride = stride
 
     def forward(self, x):
         identity = x.features
@@ -203,6 +203,47 @@ class Sparse2DBasicBlockV(spconv.SparseModule):
         out = replace_feature(out, self.relu(out.features))
 
         return out
+
+
+class Sparse2DAttBlock(spconv.SparseModule):
+    expansion = 1
+
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        kernel_size=7,
+        stride=1,
+        norm_cfg=None,
+        indice_key=None,
+    ):
+        super(Sparse2DAttBlock, self).__init__()
+        if norm_cfg is None:
+            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+
+        bias = norm_cfg is not None
+
+        # self.conv0 = spconv.SparseSequential(
+        #     conv2D3x3(inplanes, planes, stride, indice_key=indice_key, bias=bias),
+        #     build_norm_layer(norm_cfg, planes)[1]
+        # )
+        self.conv1 = spconv.SubMConv2d(2, 1, kernel_size, stride, padding=kernel_size // 2, bias=True)
+
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        # x = self.conv0(x)
+        feat = x.features
+
+        max_pool, _ = torch.max(feat, dim=1, keepdim=True)
+        avg_pool = torch.mean(feat, dim=1, keepdim=True)
+        feat = torch.cat((max_pool, avg_pool), dim=1)
+        x = replace_feature(x, feat)
+        x = self.conv1(x)
+        x = replace_feature(x, torch.sigmoid(x.features))
+
+        return x
+
 
 class Sparse2DBottleneckV(spconv.SparseModule):
     expansion = 4

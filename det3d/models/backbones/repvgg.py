@@ -38,6 +38,7 @@ class RepVGGBlock(nn.Module):
 
         self.nonlinearity = activation
 
+        self.fused = False
         bias = norm_cfg is not None
 
         self.rbr_identity = build_norm_layer(norm_cfg, in_channels)[1]
@@ -102,26 +103,16 @@ class RepVGGBlock(nn.Module):
         t = (bn.weight / std).reshape(-1, 1, 1, 1)
         weights = conv.weight * t
 
-        conv = spconv.SubMConv2d(
-            in_planes,
-            out_planes,
-            kernel_size=3,
-            stride=stride,
-            dilation=dilation,
-            padding=padding,
-            bias=bias,
-            indice_key=indice_key,
-        )
 
-        conv = nn.Conv2d(in_channels=conv.in_channels,
-                         out_channels=conv.out_channels,
-                         kernel_size=conv.kernel_size,
-                         stride=conv.stride,
-                         padding=conv.padding,
-                         dilation=conv.dilation,
-                         groups=conv.groups,
-                         bias=True,
-                         padding_mode=conv.padding_mode)
+        conv = spconv.SubMConv2d(
+            in_channels=conv.in_channels,
+            out_channels=conv.out_channels,
+            kernel_size=conv.kernel_size,
+            stride=conv.stride,
+            padding=conv.padding,
+            dilation=conv.dilation,
+            bias=True,
+        )
 
         conv.weight = torch.nn.Parameter(weights)
         conv.bias = torch.nn.Parameter(bias)
@@ -131,18 +122,10 @@ class RepVGGBlock(nn.Module):
     def fuse_repvgg_block(self):
         self.rbr_dense = self.fuse_conv_bn(self.rbr_dense.conv, self.rbr_dense.bn)
 
-        if isinstance(self.rbr_1x1, nn.Sequential) and isinstance(self.rbr_1x1[0], nn.AvgPool2d):
-            self.rbr_1x1[1] = self.fuse_conv_bn(self.rbr_1x1[1].conv, self.rbr_1x1[1].bn)
-            rbr_1x1_bias = self.rbr_1x1[1].bias
+        self.rbr_1x1 = self.fuse_conv_bn(self.rbr_1x1.conv, self.rbr_1x1.bn)
+        rbr_1x1_bias = self.rbr_1x1.bias
 
-            weight_1x1_expanded = torch.nn.functional.interpolate(self.rbr_1x1[1].weight, scale_factor=2.0, mode='nearest')
-            weight_1x1_expanded = weight_1x1_expanded / 4
-            weight_1x1_expanded = torch.nn.functional.pad(weight_1x1_expanded, [1, 0, 1, 0])
-        else:
-            self.rbr_1x1 = self.fuse_conv_bn(self.rbr_1x1.conv, self.rbr_1x1.bn)
-            rbr_1x1_bias = self.rbr_1x1.bias
-
-            weight_1x1_expanded = torch.nn.functional.pad(self.rbr_1x1.weight, [1, 1, 1, 1])
+        weight_1x1_expanded = torch.nn.functional.pad(self.rbr_1x1.weight, [1, 1, 1, 1])
 
         self.rbr_dense.weight = torch.nn.Parameter(self.rbr_dense.weight + weight_1x1_expanded)
         self.rbr_dense.bias = torch.nn.Parameter(self.rbr_dense.bias + rbr_1x1_bias)
