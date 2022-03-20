@@ -25,7 +25,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-54, -54, -5.0, 54, 54, 3.0], num_input_features=2),
     backbone=dict(
-        type="SpMiddleParallelPillarEncoderAHA", ds_factor=8, double=2,
+        type="SpMiddleTriplePillarEncoderHAAtt", ds_factor=8, double=2,
         pc_range=[-54, -54, -5.0, 54, 54, 3.0],
         pillar_cfg=dict(
             pool0=dict(bev=0.075 / 2),
@@ -36,7 +36,7 @@ model = dict(
         ),
     ),
     neck=dict(
-        type="RPNV22",
+        type="RPNV23",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
         ds_num_filters=[256, 256],

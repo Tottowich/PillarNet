@@ -132,8 +132,7 @@ class Sparse2DBasicBlock(spconv.SparseModule):
         indice_key=None,
     ):
         super(Sparse2DBasicBlock, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
         bias = norm_cfg is not None
 
@@ -172,8 +171,7 @@ class Sparse2DBasicBlockV(spconv.SparseModule):
         indice_key=None,
     ):
         super(Sparse2DBasicBlockV, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
         bias = norm_cfg is not None
 
@@ -218,28 +216,27 @@ class Sparse2DAttBlock(spconv.SparseModule):
         indice_key=None,
     ):
         super(Sparse2DAttBlock, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
         bias = norm_cfg is not None
 
-        # self.conv0 = spconv.SparseSequential(
-        #     conv2D3x3(inplanes, planes, stride, indice_key=indice_key, bias=bias),
-        #     build_norm_layer(norm_cfg, planes)[1]
-        # )
-        self.conv1 = spconv.SubMConv2d(2, 1, kernel_size, stride, padding=kernel_size // 2, bias=True)
+        self.conv1 = spconv.SparseSequential(
+            spconv.SubMConv2d(inplanes, planes, 3, stride, padding=1, indice_key=indice_key, bias=bias),
+            build_norm_layer(norm_cfg, planes)[1],
+            nn.ReLU()
+        )
 
-        self.relu = nn.ReLU()
+        self.conv2 = spconv.SubMConv2d(2, 1, kernel_size, stride, padding=kernel_size // 2, bias=True)
 
     def forward(self, x):
-        # x = self.conv0(x)
+        x = self.conv1(x)
         feat = x.features
 
         max_pool, _ = torch.max(feat, dim=1, keepdim=True)
         avg_pool = torch.mean(feat, dim=1, keepdim=True)
         feat = torch.cat((max_pool, avg_pool), dim=1)
         x = replace_feature(x, feat)
-        x = self.conv1(x)
+        x = self.conv2(x)
         x = replace_feature(x, torch.sigmoid(x.features))
 
         return x
@@ -255,8 +252,8 @@ class Sparse2DBottleneckV(spconv.SparseModule):
                  indice_key=None,
                  ):
         super(Sparse2DBottleneckV, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+
         bias = norm_cfg is not None
 
         self.conv0 = spconv.SparseSequential(
@@ -304,8 +301,8 @@ class Sparse2DBottleneck(spconv.SparseModule):
                  indice_key=None,
                  ):
         super(Sparse2DBottleneck, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+
         bias = norm_cfg is not None
         planes = inplanes // self.expansion
 
@@ -348,8 +345,7 @@ class Dense2DBottleneck(spconv.SparseModule):
                  norm_cfg=None,
                  ):
         super(Dense2DBottleneck, self).__init__()
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
+        norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
         bias = norm_cfg is not None
         planes = inplanes // self.expansion
 
