@@ -26,7 +26,7 @@ model = dict(
             type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
             pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
             pillar_cfg=dict(
-                pool0=dict(radius=0.05, bev=0.05),
+                # pool0=dict(radius=0.05, bev=0.05),
                 pool1=dict(radius=0.1, bev=0.1),
             ),
         ),
@@ -55,10 +55,12 @@ model = dict(
     second_stage_modules=[
         dict(
             type="BEVFeatureNeck",
+            bev_channels=256,
             out_channels=64,
             share_channels=64,
             out_stride=4,
             roi_grid_size=6,
+            pillar_size=0.1,
             pc_start=[-75.2, -75.2],
             bone_features=dict(
                 x_conv2=dict(stride=2, planes=32 * 2),
@@ -75,6 +77,7 @@ model = dict(
             SHARED_FC=[256, 256],
             CLS_FC=[256, 256],
             REG_FC=[256, 256],
+            IOU_FC=[256, 256],
             DP_RATIO=0.3,
 
             TARGET_CONFIG=dict(
@@ -94,6 +97,7 @@ model = dict(
                 LOSS_WEIGHTS={
                 'rcnn_cls_weight': 1.0,
                 'rcnn_reg_weight': 1.0,
+                'rcnn_iou_weight': 1.0,
                 'code_weights': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
                 }
             )
@@ -128,6 +132,7 @@ test_cfg = dict(
     ),
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
+    rectifier=0,
     out_size_factor=get_downsample_factor(model),
     voxel_size=[0.1, 0.1],
 )
@@ -205,7 +210,7 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = "data/Waymo/infos_test_01sweeps_filter_zero_gt.pkl"
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=1,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,

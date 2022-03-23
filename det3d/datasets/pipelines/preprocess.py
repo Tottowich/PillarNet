@@ -467,7 +467,7 @@ class AssignLabel(object):
 
             example.update({'gt_boxes_and_cls': gt_boxes_and_cls})
 
-            example.update({'hm': hms, 'anno_box': anno_boxs, 'ind': inds, 'mask': masks, 'cat': cats, 'gt_box': gt_boxs})
+            example.update({'hm': hms, 'anno_box': anno_boxs, 'ind': inds, 'mask': masks, 'cat': cats, 'gt_box': gt_dict['gt_boxes']})
         else:
             pass
 

@@ -11,7 +11,8 @@ class TwoStageDetector(BaseDetector):
         self,
         first_stage_cfg,
         second_stage_modules,
-        roi_head, 
+        roi_head,
+        point_head=None,
         num_point=1,
         freeze=False,
         **kwargs
@@ -32,6 +33,8 @@ class TwoStageDetector(BaseDetector):
             self.second_stage.append(builder.build_second_stage_module(module))
 
         self.roi_head = builder.build_roi_head(roi_head)
+        if point_head is not None:
+            self.point_head = builder.build_point_head(point_head)
 
         self.num_point = num_point
 
@@ -45,7 +48,6 @@ class TwoStageDetector(BaseDetector):
         return one_stage_loss
 
     def get_box_center(self, boxes):
-        # box [List]
         centers = [] 
         for box in boxes:            
             if self.num_point == 1 or len(box['box3d_lidar']) == 0:
@@ -77,16 +79,17 @@ class TwoStageDetector(BaseDetector):
                 grid_size = self.num_point
 
                 center2d = box['box3d_lidar'][:, :2]
-                # height = box['box3d_lidar'][:, 2:3]
+                height = box['box3d_lidar'][:, 2:3]
                 dim2d = box['box3d_lidar'][:, 3:5]
                 rotation_y = box['box3d_lidar'][:, -1]
 
                 points = box_torch_ops.center_to_grid_box2d(center2d, dim2d, rotation_y, grid_size)
 
+                # box = box['box3d_lidar']
                 # pp = torch.cat([points[0], height[:1].repeat(36, 1)], dim=1)
                 # from tools.visual import draw_points, draw_boxes
                 # viser = draw_points(pp.cpu().numpy(), point_size=10)
-                # viser = draw_boxes(box['box3d_lidar'][:1].cpu().numpy(), viser)
+                # viser = draw_boxes(box[:1].cpu().numpy(), viser)
                 # viser.run()
 
                 centers.append(points)
@@ -103,18 +106,10 @@ class TwoStageDetector(BaseDetector):
         feature_vector_length = features[0].shape[-1]
 
         NMS_POST_MAXSIZE = self.single_det.test_cfg.nms.nms_post_max_size
-        rois = first_pred[0]['box3d_lidar'].new_zeros((batch_size, 
-            NMS_POST_MAXSIZE, box_length
-        ))
-        roi_scores = first_pred[0]['scores'].new_zeros((batch_size,
-            NMS_POST_MAXSIZE
-        ))
-        roi_labels = first_pred[0]['label_preds'].new_zeros((batch_size,
-            NMS_POST_MAXSIZE), dtype=torch.long
-        )
-        roi_features = features[0].new_zeros((batch_size,
-            NMS_POST_MAXSIZE, feature_vector_length
-        ))
+        rois = first_pred[0]['box3d_lidar'].new_zeros((batch_size, NMS_POST_MAXSIZE, box_length))
+        roi_scores = first_pred[0]['scores'].new_zeros((batch_size, NMS_POST_MAXSIZE))
+        roi_labels = first_pred[0]['label_preds'].new_zeros((batch_size, NMS_POST_MAXSIZE), dtype=torch.long)
+        roi_features = features[0].new_zeros((batch_size, NMS_POST_MAXSIZE, feature_vector_length))
 
         for i in range(batch_size):
             num_obj = features[i].shape[0]

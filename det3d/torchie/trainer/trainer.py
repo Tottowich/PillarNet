@@ -35,7 +35,7 @@ def example_to_device(example, device, non_blocking=False) -> dict:
     example_torch = {}
     for k, v in example.items():
         if k in ["anchors", "anchors_mask", "reg_targets", "reg_weights", "labels", "hm",
-                 "anno_box", "ind", "mask", 'cat', 'gt_box']:
+                 "anno_box", "ind", "mask", 'cat']:
             example_torch[k] = [res.to(device, non_blocking=non_blocking) for res in v]
         elif k in [
             "voxels",
@@ -60,6 +60,8 @@ def example_to_device(example, device, non_blocking=False) -> dict:
             example_torch[k] = calib
         elif k == "points":
             example_torch[k] = [v1.to(device, non_blocking=non_blocking) for v1 in v]
+        elif k == "gt_box":
+            example_torch[k] = [[rr.to(device, non_blocking=non_blocking) for rr in res] for res in v]
         else:
             example_torch[k] = v
 

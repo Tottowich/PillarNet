@@ -145,7 +145,7 @@ def collate_kitti(batch_list, samples_per_gpu=1):
                 coors.append(coor_pad)
             ret[key] = torch.tensor(np.concatenate(coors, axis=0))
         elif key in ["anchors", "anchors_mask", "reg_targets", "reg_weights", "labels", "hm", "anno_box",
-                    "ind", "mask", "cat", "gt_box"]:
+                    "ind", "mask", "cat"]:
             ret[key] = defaultdict(list)
             res = []
             for elem in elems:
@@ -154,7 +154,16 @@ def collate_kitti(batch_list, samples_per_gpu=1):
             for kk, vv in ret[key].items():
                 res.append(torch.stack(vv))
             ret[key] = res
-        elif key == 'gt_boxes_and_cls':
+        elif key == "gt_box":
+            ret[key] = defaultdict(list)
+            res = []
+            for elem in elems:
+                for idx, ele in enumerate(elem):
+                    ret[key][str(idx)].append(torch.tensor(ele))
+            for kk, vv in ret[key].items():
+                res.append(vv)
+            ret[key] = res
+        elif key == "gt_boxes_and_cls":
             ret[key] = torch.tensor(np.stack(elems, axis=0))
         else:
             ret[key] = np.stack(elems, axis=0)
