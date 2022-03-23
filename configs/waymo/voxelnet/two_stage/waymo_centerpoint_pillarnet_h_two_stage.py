@@ -31,46 +31,41 @@ model = dict(
             ),
         ),
         neck=dict(
-            type="RPNV3",
+            type="RPNV2",
             layer_nums=[5, 5],
             ds_layer_strides=[1, 2],
             ds_num_filters=[256, 256],
             us_layer_strides=[1, 2],
-            us_num_filters=[256, 256],
+            us_num_filters=[128, 128],
             num_input_features=[256, 256],
             logger=logging.getLogger("RPN"),
         ),
         dense_head=dict(
-            type="CenterIoUHead",
-            in_channels=512,
+            type="CenterHead",
+            in_channels=256,
             tasks=tasks,
             dataset='waymo',
             weight=2,
-            reg_type="IoU",  # IoU GIoU DIoU ODoU
+            # reg_type="IoU",  # IoU GIoU DIoU ODoU
             code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-            common_heads={'reg': (2, 2), 'height': (1, 2), 'dim': (3, 2), 'rot': (2, 2), 'iou': (1, 2)}, # (output_channel, num_conv)
+            common_heads={'reg': (2, 2), 'height': (1, 2), 'dim': (3, 2), 'rot': (2, 2)}, # (output_channel, num_conv)
         ),
     ),
     num_point=(6, 6),
     second_stage_modules=[
         dict(
             type="BEVFeatureNeck",
-            num_channels=64,
+            out_channels=64,
             share_channels=64,
             out_stride=4,
-            bone_cfg=dict(
-                bev=dict(stride=8, planes=512),
-                # x_conv1=dict(stride=1, planes=16 * 2),
-                # x_conv2=dict(stride=2, planes=32 * 2),
-                x_conv3=dict(stride=4, planes=64 * 2),
-            )
-        ),
-        dict(
-            type="BEVFeatureExtractor",
+            roi_grid_size=6,
             pc_start=[-75.2, -75.2],
-            voxel_size=[0.1, 0.1],
-            out_stride=4
-        )
+            bone_features=dict(
+                x_conv2=dict(stride=2, planes=32 * 2),
+                x_conv3=dict(stride=4, planes=64 * 2),
+                x_conv4=dict(stride=8, planes=128 * 2),
+            ),
+        ),
     ],
     roi_head=dict(
         type="RoIHead",

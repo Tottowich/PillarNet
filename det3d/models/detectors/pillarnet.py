@@ -39,7 +39,7 @@ class PillarNet(SingleStageDetector):
             batch_size=batch_size,
         )
 
-        bev_feature, bone_features  = self.extract_feat(data)
+        bev_feature, bone_features = self.extract_feat(data)
         preds = self.bbox_head(bev_feature)
 
         if return_loss:

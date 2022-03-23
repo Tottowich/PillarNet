@@ -282,10 +282,10 @@ class SpMiddleTriplePillarEncoderHAM(nn.Module):
             nn.ReLU()
         )
 
-        self.conv4_b3 = spconv.SparseSequential(
-            Sparse2DBasicBlockV(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4_3"),
-            Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4_3")
-        )
+        # self.conv4_b3 = spconv.SparseSequential(
+        #     Sparse2DBasicBlockV(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4_3"),
+        #     Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4_3")
+        # )
 
     def _make_layer(self, inplanes, planes, num_blocks, stride=1, norm_cfg=None):
         block = Sequential(
@@ -310,7 +310,7 @@ class SpMiddleTriplePillarEncoderHAM(nn.Module):
         x_conv4_b1 = x_conv4_b1.dense()
 
         sp_tensor3 = self.pillar_pooling4(xyz, xyz_batch_cnt, pt_features)
-        sp_tensor3 = self.conv4_b3(sp_tensor3)
+        # sp_tensor3 = self.conv4_b3(sp_tensor3)
 
         # module factor
         x_conv4_b3 = sp_tensor3.dense()
@@ -461,12 +461,13 @@ class SpMiddleTriplePillarEncoderHAAtt(nn.Module):
         x_conv3_b1 = self.conv3_b1(x_conv2_b1)
         x_conv4_b1 = self.conv4_b1(x_conv3_b1)
         x_conv4_b1 = x_conv4_b1.dense()
+        x_conv4_b1 = self.deblock_b1(x_conv4_b1)
 
         sp_tensor3 = self.pillar_pooling4(xyz, xyz_batch_cnt, pt_features)
         sp_tensor3 = self.conv4_b3(sp_tensor3)
-        # attention
         sp_tensor3 = self.conv4_b3_att(sp_tensor3)
         x_conv4_att = sp_tensor3.dense()
+        x_conv4_b1 = x_conv4_b1 + x_conv4_b1 * x_conv4_att
 
         sp_tensor2 = self.pillar_pooling3(xyz, xyz_batch_cnt, pt_features)
         x_conv2_b2 = self.conv2_b2(sp_tensor2)
@@ -475,7 +476,6 @@ class SpMiddleTriplePillarEncoderHAAtt(nn.Module):
         x_conv4_b2 = self.conv4_b2(x_conv3_b2)
         x_conv4_b2 = self.conv4_b2s(x_conv4_b2)
         x_conv4_b2 = self.deblock_b2(x_conv4_b2)
-        x_conv4_b2 = x_conv4_b2 + x_conv4_b2 * x_conv4_att
 
         x_conv4 = torch.cat([x_conv4_b1, x_conv4_b2], dim=1)
 
