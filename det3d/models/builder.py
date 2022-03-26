@@ -10,7 +10,7 @@ from .registry import (
     READERS,
     SECOND_STAGE,
     ROI_HEAD,
-    POINT_HEAD
+    POINT_HEAD,
 )
 
 

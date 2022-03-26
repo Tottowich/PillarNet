@@ -69,6 +69,25 @@ model = dict(
             ),
         ),
     ],
+    point_head=dict(
+        type="PointHeadSimple",
+        num_class=1,
+        input_channels=64,
+        model_cfg=dict(
+            CLS_FC=[256, 256],
+            EVAL_MODEL=True,
+            TARGET_CONFIG=dict(
+                GT_EXTRA_WIDTH=[0.2, 0.2, 0.2],
+            ),
+            LOSS_CONFIG=dict(
+                CLS_LOSS='smooth-l1',
+                REG_LOSS='L1',
+                LOSS_WEIGHTS={
+                    'point_cls_weight': 1.0,
+                }
+            ),
+        ),
+    ),
     roi_head=dict(
         type="RoIHead",
         input_channels=64*36,
@@ -210,7 +229,7 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = "data/Waymo/infos_test_01sweeps_filter_zero_gt.pkl"
 
 data = dict(
-    samples_per_gpu=1,
+    samples_per_gpu=2,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,

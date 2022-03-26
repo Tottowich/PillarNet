@@ -86,6 +86,9 @@ class BEVFeatureNeck(nn.Module):
         cur_features = self.bev_layer(bev_feature)
         multi_scale_features = [cur_features]
 
+        if isinstance(num_point, tuple) or isinstance(num_point, list):
+            num_point = num_point[0] * num_point[1]
+
         for k, src_name in enumerate(self.bone_layer_names):
             cur_features = bone_feature[src_name]
 
@@ -111,7 +114,7 @@ class BEVFeatureNeck(nn.Module):
 
             feature_map = bilinear_interpolate_torch(multi_scale_features[batch_idx], xs.view(-1), ys.view(-1))  # N x C
             num_obi = xs.shape[0]
-            ret_maps.append(feature_map.view(num_obi, -1))
+            ret_maps.append(feature_map.view(num_obi, num_point, -1))
 
         example['features'] = ret_maps
         return example

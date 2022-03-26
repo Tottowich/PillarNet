@@ -25,18 +25,18 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-54, -54, -5.0, 54, 54, 3.0], num_input_features=2),
     backbone=dict(
-        type="DsMiddleDoublePillarEncoderHAV", ds_factor=8, double=2, layer_num=5,
+        type="SpMiddlePillarEncoder34x8HA", ds_factor=8, double=2, num_layers=5,
         pc_range=[-54, -54, -5.0, 54, 54, 3.0],
         pillar_cfg=dict(
-            pool0=dict(bev=0.075 / 2),
-            pool1=dict(bev=0.075),
-            pool2=dict(bev=0.075*2),
-            pool3=dict(bev=0.075*4),
-            pool4=dict(bev=0.075 * 8),
+            pool0=dict(radius=0.075 / 2, bev=0.075 / 2),
+            pool1=dict(radius=0.075, bev=0.075),
+            pool2=dict(radius=0.075 * 2, bev=0.075 * 2),
+            pool3=dict(radius=0.075 * 4, bev=0.075 * 4),
+            pool4=dict(radius=0.075 * 8, bev=0.075 * 8),
         ),
     ),
     neck=dict(
-        type="RPNV23",
+        type="RPNV2",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
         ds_num_filters=[256, 256],
@@ -51,7 +51,7 @@ model = dict(
         tasks=tasks,
         dataset='nuscenes',
         weight=0.25,
-        # reg_type="IoU",  # IoU GIoU DIoU ODoU
+        # reg_type="DIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'vel': (2, 2)},
         share_conv_channel=64,
@@ -177,7 +177,7 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=4,
     workers_per_gpu=6,
     train=dict(
         type=dataset_type,

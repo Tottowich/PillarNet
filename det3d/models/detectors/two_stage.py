@@ -33,8 +33,8 @@ class TwoStageDetector(BaseDetector):
             self.second_stage.append(builder.build_second_stage_module(module))
 
         self.roi_head = builder.build_roi_head(roi_head)
-        if point_head is not None:
-            self.point_head = builder.build_point_head(point_head)
+
+        self.point_head = builder.build_point_head(point_head) if point_head is not None else None
 
         self.num_point = num_point
 
@@ -84,7 +84,7 @@ class TwoStageDetector(BaseDetector):
                 rotation_y = box['box3d_lidar'][:, -1]
 
                 points = box_torch_ops.center_to_grid_box2d(center2d, dim2d, rotation_y, grid_size)
-
+                #
                 # box = box['box3d_lidar']
                 # pp = torch.cat([points[0], height[:1].repeat(36, 1)], dim=1)
                 # from tools.visual import draw_points, draw_boxes
@@ -102,8 +102,11 @@ class TwoStageDetector(BaseDetector):
         batch_size = len(first_pred)
         box_length = first_pred[0]['box3d_lidar'].shape[1]
 
+        if isinstance(self.num_point, tuple) or isinstance(self.num_point, list):
+            num_point = self.num_point[0] * self.num_point[1]
+
         features = example['features']
-        feature_vector_length = features[0].shape[-1]
+        feature_vector_length = features[0].shape[-1] * num_point
 
         NMS_POST_MAXSIZE = self.single_det.test_cfg.nms.nms_post_max_size
         rois = first_pred[0]['box3d_lidar'].new_zeros((batch_size, NMS_POST_MAXSIZE, box_length))
@@ -123,9 +126,9 @@ class TwoStageDetector(BaseDetector):
                 box_preds = box_preds[:, [0, 1, 2, 3, 4, 5, 8, 6, 7]]
 
             rois[i, :num_obj] = box_preds
-            roi_labels[i, :num_obj] = first_pred[i]['label_preds'] + 1
-            roi_scores[i, :num_obj] = first_pred[i]['scores']
-            roi_features[i, :num_obj] = features[i]
+            roi_labels[i, :500] = first_pred[i]['label_preds'] + 1
+            roi_scores[i, :500] = first_pred[i]['scores']
+            roi_features[i, :num_obj] = features[i].view(num_obj, -1)
 
         example['rois'] = rois 
         example['roi_labels'] = roi_labels 
@@ -180,6 +183,7 @@ class TwoStageDetector(BaseDetector):
         else:
             raise NotImplementedError
 
+        one_stage_pred[0]['box3d_lidar'] = example['gt_box'][0][0]
         centers_vehicle_frame = self.get_box_center(one_stage_pred)
 
         if self.roi_head.code_size == 7 and return_loss is True:
@@ -193,6 +197,8 @@ class TwoStageDetector(BaseDetector):
 
         # final classification / regression 
         batch_dict = self.roi_head(example, training=return_loss)
+        if self.point_head is not None:
+            batch_dict = self.point_head(example, centers_vehicle_frame, training=return_loss)
 
         if return_loss:
             roi_loss, tb_dict = self.roi_head.get_loss()
