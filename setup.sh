@@ -13,6 +13,9 @@ python setup.py build_ext --inplace
 cd .. && cd  points_ops
 python setup.py build_ext --inplace
 
+cd .. && cd  roiaware_pool3d
+python setup.py build_ext --inplace
+
 cd det3d/ops/pointnet2 && cd pointnet2_batch
 python setup.py build_ext --inplace
 
