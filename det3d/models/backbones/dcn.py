@@ -757,26 +757,32 @@ class DsMiddlePillarEncoder2xHA(nn.Module):
         # )
 
         self.conv2 = nn.Sequential(
-            Dense2DBasicBlockV(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2"),
-            Dense2DBasicBlock(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2"),
+            Dense2DBasicBlockV(32 * double, 32 * double),
+            Dense2DBasicBlock(32 * double, 32 * double),
         )
 
         self.conv3 = nn.Sequential(
-            block(32 * double, 64*double, 3, norm_cfg=norm_cfg, stride=2, padding=1),
-            Dense2DBasicBlock(64*double, 64*double, norm_cfg=norm_cfg, indice_key="res3"),
-            Dense2DBasicBlock(64*double, 64*double, norm_cfg=norm_cfg, indice_key="res3"),
+            nn.Conv2d(32 * double, 64 * double, 3, 2, padding=1, bias=False),
+            build_norm_layer(norm_cfg, 64 * double)[1],
+            nn.ReLU(),
+            Dense2DBasicBlock(64 * double, 64 * double),
+            Dense2DBasicBlock(64 * double, 64 * double),
         )
 
         self.conv4 = nn.Sequential(
-            block(64 * double, 128*double, 3, norm_cfg=norm_cfg, stride=2, padding=1),
-            Dense2DBasicBlock(128*double, 128*double, norm_cfg=norm_cfg, indice_key="res4"),
-            Dense2DBasicBlock(128*double, 128*double, norm_cfg=norm_cfg, indice_key="res4"),
+            nn.Conv2d(64 * double, 128 * double, 3, 2, padding=1, bias=False),
+            build_norm_layer(norm_cfg, 128 * double)[1],
+            nn.ReLU(),
+            Dense2DBasicBlock(128 * double, 128 * double),
+            Dense2DBasicBlock(128 * double, 128 * double),
         )
 
         self.conv5 = nn.Sequential(
-            block(128 * double, 256, 3, norm_cfg=norm_cfg, stride=2, padding=1),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
+            nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
+            build_norm_layer(norm_cfg, 256)[1],
+            nn.ReLU(),
+            Dense2DBasicBlock(256, 256),
+            Dense2DBasicBlock(256, 256),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
@@ -788,8 +794,8 @@ class DsMiddlePillarEncoder2xHA(nn.Module):
         x_conv5 = self.conv5(x_conv4)
         return dict(
             # x_conv1=x_conv1,
-            x_conv2=x_conv2,
-            x_conv3=x_conv3,
+            # x_conv2=x_conv2,
+            # x_conv3=x_conv3,
             x_conv4=x_conv4,
             x_conv5=x_conv5
         )

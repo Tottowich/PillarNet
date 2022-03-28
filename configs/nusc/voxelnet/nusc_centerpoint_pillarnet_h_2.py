@@ -25,7 +25,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-54, -54, -5.0, 54, 54, 3.0], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoder2xHA", ds_factor=8, double=2,
+        type="DsMiddlePillarEncoder2xHA", ds_factor=8, double=2,
         pc_range=[-54, -54, -5.0, 54, 54, 3.0],
         pillar_cfg=dict(
             pool0=dict(bev=0.075 / 2),
@@ -176,7 +176,7 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=4,
+    samples_per_gpu=1,
     workers_per_gpu=6,
     train=dict(
         type=dataset_type,
