@@ -2273,7 +2273,7 @@ class SpMiddlePillarEncoder50HA(nn.Module):
         return dict(
             # x_conv1=x_conv1,
             # x_conv2=x_conv2,
-            x_conv3=x_conv3,
+            # x_conv3=x_conv3,
             x_conv4=x_conv4,
             x_conv5=x_conv5
         )
