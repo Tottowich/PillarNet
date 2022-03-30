@@ -270,7 +270,7 @@ class Sparse2DBottleneckV(spconv.SparseModule):
         )
         self.conv3 = spconv.SparseSequential(
             conv2D1x1(planes, planes * self.expansion, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
+            build_norm_layer(norm_cfg, planes * self.expansion)[1]
         )
         self.relu = nn.ReLU()
         self.stride = stride
@@ -316,7 +316,7 @@ class Sparse2DBottleneck(spconv.SparseModule):
         )
         self.conv3 = spconv.SparseSequential(
             conv2D1x1(planes, inplanes, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
+            build_norm_layer(norm_cfg, inplanes)[1]
         )
         self.relu = nn.ReLU()
         self.stride = stride

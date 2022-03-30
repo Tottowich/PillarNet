@@ -2208,9 +2208,9 @@ class SpMiddlePillarEncoder50HA(nn.Module):
 
         expansion = Sparse2DBottleneck.expansion
         self.conv1 = spconv.SparseSequential(
-            Sparse2DBottleneckV(16*double, 16*double, norm_cfg=norm_cfg, indice_key="res0"),
-            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res0"),
-            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res0"),
+            Sparse2DBottleneckV(16*double, 16*double, norm_cfg=norm_cfg, indice_key="res1"),
+            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
+            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
         )
 
         self.conv2 = spconv.SparseSequential(
@@ -2219,10 +2219,10 @@ class SpMiddlePillarEncoder50HA(nn.Module):
             ),  # [752, 752] -> [376, 376]
             build_norm_layer(norm_cfg, 32*double*expansion)[1],
             nn.ReLU(),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
+            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
+            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
+            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
+            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
         )
 
         self.conv3 = spconv.SparseSequential(
@@ -2231,12 +2231,12 @@ class SpMiddlePillarEncoder50HA(nn.Module):
             ),  # [376, 376] -> [188, 188]
             build_norm_layer(norm_cfg, 64*double*expansion)[1],
             nn.ReLU(),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
         )
 
         self.conv4 = spconv.SparseSequential(
@@ -2245,9 +2245,9 @@ class SpMiddlePillarEncoder50HA(nn.Module):
             ),
             build_norm_layer(norm_cfg, 128*double*expansion)[1],
             nn.ReLU(),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
+            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
+            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
+            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
         )
 
         norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
@@ -2257,9 +2257,9 @@ class SpMiddlePillarEncoder50HA(nn.Module):
             ),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
-            Dense2DBasicBlock(256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, norm_cfg=norm_cfg),
+            Dense2DBasicBlock(256, 256),
+            Dense2DBasicBlock(256, 256),
+            Dense2DBasicBlock(256, 256),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
