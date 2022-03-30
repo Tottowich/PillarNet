@@ -25,14 +25,14 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-54, -54, -5.0, 54, 54, 3.0], num_input_features=2),
     backbone=dict(
-        type="DsMiddleDoublePillarEncoderHAV", ds_factor=8, double=2, layer_num=5,
+        type="DsMiddleDoublePillarEncoderHAV", ds_factor=8, double=2, layer_num=10,
         pc_range=[-54, -54, -5.0, 54, 54, 3.0],
         pillar_cfg=dict(
             pool0=dict(bev=0.075 / 2),
             pool1=dict(bev=0.075),
             pool2=dict(bev=0.075*2),
             pool3=dict(bev=0.075*4),
-            pool4=dict(bev=0.075 * 8),
+            pool4=dict(bev=0.075*8),
         ),
     ),
     neck=dict(
@@ -152,6 +152,7 @@ voxel_generator = dict(
     voxel_size=[0.075, 0.075, 0.2],
     max_points_in_voxel=10,
     max_voxel_num=[120000, 160000],
+    skip=True
 )
 
 train_pipeline = [

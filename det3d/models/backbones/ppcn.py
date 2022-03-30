@@ -241,7 +241,7 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
         #     Sparse2DBasicBlock(64 * double, 64 * double, norm_cfg=norm_cfg, indice_key="res2_2"),
         # )
 
-        self.conv3_b2 = spconv.SparseSequential(
+        self.conv4_b2 = spconv.SparseSequential(
             # SparseConv2d(
             #     64 * double, 128 * double, 3, 2, padding=1, bias=False
             # ),  # [376, 376] -> [188, 188]
@@ -252,7 +252,7 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
         )
 
         norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
-        self.conv4_b2 = nn.Sequential(
+        self.conv5_b2 = nn.Sequential(
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
@@ -260,7 +260,7 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
-        self.conv4_b2s = self._make_layer(256, 256, layer_num, stride=1, norm_cfg=norm_cfg)
+        self.conv5_b2s = self._make_layer(256, 256, layer_num, stride=1, norm_cfg=norm_cfg)
 
         self.deblock_b1 = nn.Sequential(
             nn.ZeroPad2d(1),
@@ -299,11 +299,11 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
 
         sp_tensor2 = self.pillar_pooling4(xyz, xyz_batch_cnt, pt_features)
         # x_conv2_b2 = self.conv2_b2(sp_tensor2)
-        x_conv3_b2 = self.conv3_b2(sp_tensor2)
-        x_conv3_b2 = x_conv3_b2.dense()
-        x_conv4_b2 = self.conv4_b2(x_conv3_b2)
-        x_conv4_b2 = self.conv4_b2s(x_conv4_b2)
-        x_conv4_b2 = self.deblock_b2(x_conv4_b2)
+        x_conv4_b2 = self.conv4_b2(sp_tensor2)
+        x_conv4_b2 = x_conv4_b2.dense()
+        x_conv5_b2 = self.conv5_b2(x_conv4_b2)
+        x_conv5_b2 = self.conv5_b2s(x_conv5_b2)
+        x_conv4_b2 = self.deblock_b2(x_conv5_b2)
 
         x_conv4 = torch.cat([x_conv4_b1, x_conv4_b2], dim=1)
 
@@ -370,12 +370,12 @@ class DsMiddleDoublePillarEncoderHAV(nn.Module):
         #     Sparse2DBasicBlock(64 * double, 64 * double, norm_cfg=norm_cfg, indice_key="res2_2"),
         # )
 
-        self.conv3_b2 = nn.Sequential(
+        self.conv4_b2 = nn.Sequential(
             Dense2DBasicBlockV(128 * double, 128 * double),
             Dense2DBasicBlock(128 * double, 128 * double),
         )
 
-        self.conv4_b2 = nn.Sequential(
+        self.conv5_b2 = nn.Sequential(
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
@@ -383,7 +383,7 @@ class DsMiddleDoublePillarEncoderHAV(nn.Module):
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
-        self.conv4_b2s = self._make_layer(256, 256, layer_num, stride=1, norm_cfg=norm_cfg)
+        self.conv5_b2s = self._make_layer(256, 256, layer_num, stride=1, norm_cfg=norm_cfg)
 
         self.deblock_b1 = nn.Sequential(
             nn.ZeroPad2d(1),
@@ -422,10 +422,10 @@ class DsMiddleDoublePillarEncoderHAV(nn.Module):
 
         sp_tensor2 = self.pillar_pooling4(xyz, xyz_batch_cnt, pt_features)
         ds_tensor2 = sp_tensor2.dense()
-        x_conv3_b2 = self.conv3_b2(ds_tensor2)
-        x_conv4_b2 = self.conv4_b2(x_conv3_b2)
-        x_conv4_b2 = self.conv4_b2s(x_conv4_b2)
-        x_conv4_b2 = self.deblock_b2(x_conv4_b2)
+        x_conv4_b2 = self.conv4_b2(ds_tensor2)
+        x_conv5_b2 = self.conv5_b2(x_conv4_b2)
+        x_conv5_b2 = self.conv5_b2s(x_conv5_b2)
+        x_conv4_b2 = self.deblock_b2(x_conv5_b2)
 
         x_conv4 = torch.cat([x_conv4_b1, x_conv4_b2], dim=1)
 
