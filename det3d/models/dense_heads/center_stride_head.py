@@ -164,7 +164,7 @@ class DCNSepHead(nn.Module):
 
 
 @HEADS.register_module
-class CenterMultiHead(nn.Module):
+class CenterStrideHead(nn.Module):
     def __init__(
         self,
         in_channels=[128,],
@@ -180,7 +180,7 @@ class CenterMultiHead(nn.Module):
         dcn_head=False,
         **kwargs
     ):
-        super(CenterMultiHead, self).__init__()
+        super(CenterStrideHead, self).__init__()
 
         num_classes = [len(t["class_names"]) for t in tasks]
         self.class_names = [t["class_names"] for t in tasks]

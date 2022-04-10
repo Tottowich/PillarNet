@@ -4,7 +4,8 @@ import logging
 from det3d.utils.config_tool import get_downsample_factor
 
 tasks = [
-    dict(stride=8, class_names=['VEHICLE', 'PEDESTRIAN', 'CYCLIST']),
+    dict(stride=8, class_names=['VEHICLE']),
+    dict(stride=8, class_names=['PEDESTRIAN', 'CYCLIST']),
 ]
 
 class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
@@ -28,18 +29,18 @@ model = dict(
         ),
     ),
     neck=dict(
-        type="RPNV3",
+        type="RPNV2",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
         ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
-        us_num_filters=[256, 256],
+        us_num_filters=[128, 128],
         num_input_features=[256, 256],
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
         type="CenterHead",
-        in_channels=512,
+        in_channels=256,
         tasks=tasks,
         dataset='waymo',
         weight=2,
@@ -66,11 +67,14 @@ train_cfg = dict(assigner=assigner)
 test_cfg = dict(
     post_center_limit_range=[-80, -80, -10.0, 80, 80, 10.0],
     nms=dict(
-        use_rotate_nms=True,
-        use_multi_class_nms=False,
-        nms_pre_max_size=4096,
-        nms_post_max_size=500,
-        nms_iou_threshold=0.7,
+        use_rotate_nms=False,
+        # nms_pre_max_size=[2048, 1024, 1024],
+        # nms_post_max_size=[300, 200, 200],
+        # nms_iou_threshold=0.7,
+        use_multi_class_nms=True,
+        nms_pre_max_size=[2048, 1024, 1024],
+        nms_post_max_size=[300, 100, 100],
+        nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],

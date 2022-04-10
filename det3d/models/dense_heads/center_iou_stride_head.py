@@ -164,7 +164,7 @@ class DCNSepHead(nn.Module):
 
 
 @HEADS.register_module
-class CenterIoUMultiHead(nn.Module):
+class CenterIoUStrideHead(nn.Module):
     def __init__(
         self,
         in_channels=[128,],
@@ -181,7 +181,7 @@ class CenterIoUMultiHead(nn.Module):
         reg_type="DIoU",
         **kwargs
     ):
-        super(CenterIoUMultiHead, self).__init__()
+        super(CenterIoUStrideHead, self).__init__()
 
         num_classes = [len(t["class_names"]) for t in tasks]
         self.class_names = [t["class_names"] for t in tasks]

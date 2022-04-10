@@ -4,7 +4,8 @@ import logging
 from det3d.utils.config_tool import get_downsample_factor
 
 tasks = [
-    dict(stride=8, class_names=['VEHICLE', 'PEDESTRIAN', 'CYCLIST']),
+    dict(stride=8, class_names=['VEHICLE']),
+    dict(stride=4, class_names=['PEDESTRIAN', 'CYCLIST']),
 ]
 
 class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
@@ -20,29 +21,30 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderH", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
-            pool0=dict(radius=0.05, bev=0.05),
-            pool1=dict(radius=0.1, bev=0.1),
+            pool0=dict(bev=0.05),
+            pool1=dict(bev=0.1),
         ),
     ),
     neck=dict(
-        type="RPNV3",
+        type="RPNG2",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
-        ds_num_filters=[128, 256],
+        ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
-        us_num_filters=[256, 256],
+        us_num_filters=[128, 128],
         num_input_features=[256, 256],
         logger=logging.getLogger("RPN"),
     ),
-    bbox_head=dict(
-        type="CenterHead",
-        in_channels=sum([256, 256]),
+    dense_head=dict(
+        type="CenterStrideHead",
+        in_channels=64,
         tasks=tasks,
         dataset='waymo',
         weight=2,
+        # reg_type="IoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
     ),
@@ -65,11 +67,14 @@ train_cfg = dict(assigner=assigner)
 test_cfg = dict(
     post_center_limit_range=[-80, -80, -10.0, 80, 80, 10.0],
     nms=dict(
-        use_rotate_nms=True,
-        use_multi_class_nms=False,
-        nms_pre_max_size=4096,
-        nms_post_max_size=500,
-        nms_iou_threshold=0.7,
+        use_rotate_nms=False,
+        # nms_pre_max_size=[2048, 1024, 1024],
+        # nms_post_max_size=[300, 200, 200],
+        # nms_iou_threshold=0.7,
+        use_multi_class_nms=True,
+        nms_pre_max_size=[2048, 1024, 1024],
+        nms_post_max_size=[300, 100, 100],
+        nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
@@ -104,6 +109,7 @@ db_sampler = dict(
     ],
     global_random_rotation_range_per_object=[0, 0],
     rate=1.0,
+    extra_scale=1.,
 ) 
 
 train_preprocessor = dict(
@@ -149,7 +155,7 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=4,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,

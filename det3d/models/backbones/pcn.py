@@ -1172,6 +1172,7 @@ class SpMiddlePillarEncoder34HA(nn.Module):
             nn.ReLU(),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
+            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
@@ -1263,6 +1264,7 @@ class SpMiddlePillarEncoder34x2HA(nn.Module):
             nn.ReLU(),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
+            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
@@ -1352,6 +1354,7 @@ class SpMiddlePillarEncoder34x4HA(nn.Module):
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
+            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
@@ -1448,6 +1451,7 @@ class SpMiddlePillarEncoder34x8HA(nn.Module):
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
+            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
