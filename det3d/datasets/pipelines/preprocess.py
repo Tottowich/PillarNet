@@ -376,14 +376,8 @@ class AssignLabel(object):
                 hm = np.zeros((len(class_names_by_task[idx]), cur_feat_map_size[1], cur_feat_map_size[0]),
                               dtype=np.float32)
 
+                anno_box = np.zeros((max_objs, 10), dtype=np.float32)
                 gt_box = np.zeros((max_objs, 7), dtype=np.float32)
-                if res['type'] == 'NuScenesDataset':
-                    # [reg, hei, dim, vx, vy, rots, rotc]
-                    anno_box = np.zeros((max_objs, 10), dtype=np.float32)
-                elif res['type'] == 'WaymoDataset':
-                    anno_box = np.zeros((max_objs, 10), dtype=np.float32) 
-                else:
-                    raise NotImplementedError("Only Support nuScene for Now!")
 
                 ind = np.zeros((max_objs), dtype=np.int64)
                 mask = np.zeros((max_objs), dtype=np.uint8)
@@ -439,9 +433,9 @@ class AssignLabel(object):
                             np.array(vx), np.array(vy), np.sin(rot), np.cos(rot)), axis=None)
                         else:
                             raise NotImplementedError("Only Support Waymo and nuScene for Now")
-                gt_boxs.append(gt_box)
                 hms.append(hm)
                 anno_boxs.append(anno_box)
+                gt_boxs.append(gt_box)
                 masks.append(mask)
                 inds.append(ind)
                 cats.append(cat)
@@ -468,7 +462,7 @@ class AssignLabel(object):
             example.update({'gt_boxes_and_cls': gt_boxes_and_cls})
 
             example.update({'hm': hms, 'anno_box': anno_boxs, 'ind': inds, 'mask': masks, 'cat': cats,
-                            'gt_box': [boxes[:, [0, 1, 2, 3, 4, 5, 8]]]})
+                            'gt_box': gt_boxs, 'raw_gt_box': [boxes[:, [0, 1, 2, 3, 4, 5, 8]]]})
         else:
             pass
 

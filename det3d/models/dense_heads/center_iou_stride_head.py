@@ -186,6 +186,7 @@ class CenterIoUStrideHead(nn.Module):
         num_classes = [len(t["class_names"]) for t in tasks]
         self.class_names = [t["class_names"] for t in tasks]
         self.task_strides = [str(t.stride) for t in tasks]
+
         self.code_weights = code_weights 
         self.weight = weight  # weight between hm loss and loc loss
         self.dataset = dataset

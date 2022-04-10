@@ -21,7 +21,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddlePillarEncoder34HA", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -39,14 +39,14 @@ model = dict(
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
-        type="CenterStrideHead",
+        type="CenterIoUStrideHead",
         in_channels=64,
         tasks=tasks,
         dataset='waymo',
         weight=2,
-        # reg_type="IoU",  # IoU GIoU DIoU ODoU
+        reg_type="DIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
+        common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'iou':(1, 2)}, # (output_channel, num_conv)
     ),
 )
 
@@ -76,7 +76,7 @@ test_cfg = dict(
         nms_post_max_size=[300, 100, 100],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
-    rectifier=0,
+    rectifier=[0.68, 0.71, 0.65],
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
     out_size_factor=get_downsample_factor(model),
