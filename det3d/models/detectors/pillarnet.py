@@ -3,6 +3,7 @@ from .single_stage import SingleStageDetector
 from det3d.torchie.trainer import load_checkpoint
 import torch 
 from copy import deepcopy 
+from det3d.core.utils.center_utils import reorganize_test_cfg_for_multi_tasks
 
 
 @DETECTORS.register_module
@@ -20,6 +21,7 @@ class PillarNet(SingleStageDetector):
         super(PillarNet, self).__init__(
             reader, backbone, neck, dense_head, train_cfg, test_cfg, pretrained
         )
+        self.test_cfg = reorganize_test_cfg_for_multi_tasks(self.test_cfg, self.bbox_head.num_classes)
         
     def extract_feat(self, data):
         data = self.reader(data)
@@ -43,7 +45,6 @@ class PillarNet(SingleStageDetector):
         preds = self.bbox_head(bev_feature)
 
         if return_loss:
-            self.bbox_head.predict(example, preds, self.test_cfg)
             return self.bbox_head.loss(example, preds, self.test_cfg)
         else:
             return self.bbox_head.predict(example, preds, self.test_cfg)

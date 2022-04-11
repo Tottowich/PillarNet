@@ -21,7 +21,6 @@ except:
     print("Deformable Convolution not built!")
 
 from det3d.core.utils.circle_nms_jit import circle_nms
-from det3d.core.utils.center_utils import reorganize_test_cfg_for_multi_tasks
 
 class FeatureAdaption(nn.Module):
     """Feature Adaption Module.
@@ -346,8 +345,6 @@ class CenterHead(nn.Module):
                 dtype=preds_dicts[0]['hm'].dtype,
                 device=preds_dicts[0]['hm'].device,
             )
-
-        test_cfg = reorganize_test_cfg_for_multi_tasks(test_cfg, self.num_classes)
 
         for task_id, preds_dict in enumerate(preds_dicts):
             # convert N C H W to N H W C 
