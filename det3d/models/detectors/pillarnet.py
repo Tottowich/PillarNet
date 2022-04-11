@@ -43,6 +43,7 @@ class PillarNet(SingleStageDetector):
         preds = self.bbox_head(bev_feature)
 
         if return_loss:
+            self.bbox_head.predict(example, preds, self.test_cfg)
             return self.bbox_head.loss(example, preds, self.test_cfg)
         else:
             return self.bbox_head.predict(example, preds, self.test_cfg)
