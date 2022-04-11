@@ -21,6 +21,7 @@ except:
     print("Deformable Convolution not built!")
 
 from det3d.core.utils.circle_nms_jit import circle_nms
+from det3d.core.utils.center_utils import reorganize_test_cfg_for_multi_tasks
 
 class FeatureAdaption(nn.Module):
     """Feature Adaption Module.
@@ -181,15 +182,13 @@ class CenterHead(nn.Module):
     ):
         super(CenterHead, self).__init__()
 
-        num_classes = [len(t["class_names"]) for t in tasks]
+        self.num_classes = [len(t["class_names"]) for t in tasks]
         self.class_names = [t["class_names"] for t in tasks]
         self.task_strides = [str(t.stride) for t in tasks]
         self.code_weights = code_weights 
         self.weight = weight  # weight between hm loss and loc loss
         self.dataset = dataset
-
         self.in_channels = in_channels
-        self.num_classes = num_classes
 
         self.crit = FastFocalLoss()
         self.crit_reg = RegLoss()
@@ -204,7 +203,7 @@ class CenterHead(nn.Module):
         self.logger = logger
 
         logger.info(
-            f"num_classes: {num_classes}"
+            f"num_classes: {self.num_classes}"
         )
 
         # a shared convolution 
@@ -221,7 +220,7 @@ class CenterHead(nn.Module):
         if dcn_head:
             print("Use Deformable Convolution in the CenterHead!")
 
-        for num_cls in num_classes:
+        for num_cls in self.num_classes:
             heads = copy.deepcopy(common_heads)
             if not dcn_head:
                 heads.update(dict(hm=(num_cls, num_hm_conv)))
@@ -347,6 +346,8 @@ class CenterHead(nn.Module):
                 dtype=preds_dicts[0]['hm'].dtype,
                 device=preds_dicts[0]['hm'].device,
             )
+
+        test_cfg = reorganize_test_cfg_for_multi_tasks(test_cfg, self.num_classes)
 
         for task_id, preds_dict in enumerate(preds_dicts):
             # convert N C H W to N H W C 
@@ -520,27 +521,28 @@ class CenterHead(nn.Module):
                 centers = boxes_for_nms[:, [0, 1]]
                 boxes = torch.cat([centers, scores.view(-1, 1)], dim=1)
                 selected = _circle_nms(boxes, min_radius=test_cfg.min_radius[task_id],
-                                       post_max_size=test_cfg.nms.nms_post_max_size)
+                                       post_max_size=test_cfg.nms.nms_post_max_size[task_id])
 
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_rotate_nms', False):
+                assert isinstance(test_cfg.rectifier,float)
                 scores = torch.pow(scores, 1-test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
                 selected = box_torch_ops.rotate_nms_pcdet(boxes_for_nms.float(), scores.float(),
-                                                          thresh=test_cfg.nms.nms_iou_threshold,
-                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size,
-                                                          post_max_size=test_cfg.nms.nms_post_max_size)
+                                                          thresh=test_cfg.nms.nms_iou_threshold[task_id],
+                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
+                                                          post_max_size=test_cfg.nms.nms_post_max_size[task_id])
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_multi_class_nms', False):
                 selected_boxes, selected_scores, selected_labels = box_torch_ops.rotate_class_specific_nms_pcdet(
                     boxes_for_nms.float(), scores.float(), iou_preds, box_preds, labels, num_class,
-                    test_cfg.rectifier,
-                    thresh=test_cfg.nms.nms_iou_threshold,
-                    pre_maxsize=test_cfg.nms.nms_pre_max_size,
-                    post_max_size=test_cfg.nms.nms_post_max_size)
+                    test_cfg.rectifier[task_id],
+                    thresh=test_cfg.nms.nms_iou_threshold[task_id],
+                    pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
+                    post_max_size=test_cfg.nms.nms_post_max_size[task_id])
             else:
                 raise NotImplementedError
 

@@ -369,3 +369,48 @@ def bboxes_overlaps_cdiou(pred_boxes, gt_boxes):
             d2 / torch.pow(d + qr + gr, 2)
     cdious = torch.clamp(cdious, min=-1, max=1.)
     return cdious
+
+
+def reorganize_test_cfg_for_multi_tasks(test_cfg, task_num_classes):
+    """
+    - for single float, copy for each task head;
+    - for list, re-organize for multiple task heads.
+
+    :param test_cfg:
+      nms=dict(
+        use_rotate_nms=False,
+        # nms_pre_max_size=4096,
+        # nms_post_max_size=500,
+        # nms_iou_threshold=0.7,
+        use_multi_class_nms=True,
+        nms_pre_max_size=[2048, 1024, 1024],
+        nms_post_max_size=[300, 150, 150],
+        nms_iou_threshold=[0.8, 0.55, 0.55],
+    ),
+    rectifier=[0, 0, 0],
+    score_threshold=0.1,
+    :param task_num_classes: [int] * num_classes
+    :return:
+    """
+    def reorganize_param(param):
+        if isinstance(param, float):
+            return [param] * len(task_num_classes)
+
+        assert isinstance(param, list) or isinstance(param, tuple)
+        assert len(param) == sum(task_num_classes)
+
+        ret_list = [[]] * len(task_num_classes)
+        flag = 0
+        for k, num in enumerate(task_num_classes):
+            ret_list[k] = list(param[flag:flag+num])
+            flag += num
+        return ret_list
+
+    if test_cfg.get('rectifier', False):
+        test_cfg['rectifier'] = reorganize_param(test_cfg['rectifier'])
+
+    test_cfg['nms']['nms_pre_max_size'] = reorganize_param(test_cfg['nms']['nms_pre_max_size'])
+    test_cfg['nms']['nms_post_max_size'] = reorganize_param(test_cfg['nms']['nms_post_max_size'])
+    test_cfg['nms']['nms_iou_threshold'] = reorganize_param(test_cfg['nms']['nms_iou_threshold'])
+
+    return test_cfg

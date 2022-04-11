@@ -73,9 +73,10 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 100, 100],
+        nms_post_max_size=[300, 150, 150],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
+    rectifier=[0, 0, 0],
     score_threshold=0.1,
     pc_range=[-75.2, -75.2],
     out_size_factor=get_downsample_factor(model),
@@ -155,7 +156,7 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=4,
+    samples_per_gpu=2,
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
