@@ -393,7 +393,7 @@ def reorganize_test_cfg_for_multi_tasks(test_cfg, task_num_classes):
     :return:
     """
     def reorganize_param(param):
-        if isinstance(param, float):
+        if isinstance(param, float) or isinstance(param, int):
             return [param] * len(task_num_classes)
 
         assert isinstance(param, list) or isinstance(param, tuple)

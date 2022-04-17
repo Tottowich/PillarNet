@@ -528,27 +528,28 @@ class CenterIoUHead(nn.Module):
                 centers = boxes_for_nms[:, [0, 1]]
                 boxes = torch.cat([centers, scores.view(-1, 1)], dim=1)
                 selected = _circle_nms(boxes, min_radius=test_cfg.min_radius[task_id],
-                                       post_max_size=test_cfg.nms.nms_post_max_size)
+                                       post_max_size=test_cfg.nms.nms_post_max_size[task_id])
 
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_rotate_nms', False):
-                scores = torch.pow(scores, 1-test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
+                assert isinstance(test_cfg.rectifier, float)
+                scores = torch.pow(scores, 1 - test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
                 selected = box_torch_ops.rotate_nms_pcdet(boxes_for_nms.float(), scores.float(),
-                                                          thresh=test_cfg.nms.nms_iou_threshold,
-                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size,
-                                                          post_max_size=test_cfg.nms.nms_post_max_size)
+                                                          thresh=test_cfg.nms.nms_iou_threshold[task_id],
+                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
+                                                          post_max_size=test_cfg.nms.nms_post_max_size[task_id])
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_multi_class_nms', False):
                 selected_boxes, selected_scores, selected_labels = box_torch_ops.rotate_class_specific_nms_pcdet(
                     boxes_for_nms.float(), scores.float(), iou_preds, box_preds, labels, num_class,
-                    test_cfg.rectifier,
-                    thresh=test_cfg.nms.nms_iou_threshold,
-                    pre_maxsize=test_cfg.nms.nms_pre_max_size,
-                    post_max_size=test_cfg.nms.nms_post_max_size)
+                    test_cfg.rectifier[task_id],
+                    thresh=test_cfg.nms.nms_iou_threshold[task_id],
+                    pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
+                    post_max_size=test_cfg.nms.nms_post_max_size[task_id])
             else:
                 raise NotImplementedError
 
