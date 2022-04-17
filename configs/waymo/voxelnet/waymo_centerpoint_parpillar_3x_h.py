@@ -21,7 +21,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
+        type="SpMiddleDoublePillarEncoderHAV", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -32,12 +32,12 @@ model = dict(
         ),
     ),
     neck=dict(
-        type="RPNV2",
+        type="RPNV23",
         layer_nums=[5, 5],
         ds_layer_strides=[1, 2],
-        ds_num_filters=[128, 256],
+        ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
-        us_num_filters=[256, 128],
+        us_num_filters=[128, 128],
         num_input_features=[256, 256],
         logger=logging.getLogger("RPN"),
     ),

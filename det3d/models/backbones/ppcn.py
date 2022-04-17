@@ -195,11 +195,11 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
         if norm_cfg is None:
             norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
-        self.pillar_pooling2 = PillarMaxPoolingV2a(
+        self.pillar_pooling1 = PillarMaxPoolingV2a(
             # radius=pillar_cfg['pool1']['radius'],
-            mlps=[6 + num_input_features, 32 * double],
+            mlps=[6 + num_input_features, 16 * double],
             norm_cfg=norm_cfg,
-            bev_size=pillar_cfg['pool2']['bev'],
+            bev_size=pillar_cfg['pool1']['bev'],
             point_cloud_range=pc_range
         )
 
@@ -211,9 +211,19 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
             point_cloud_range=pc_range
         )
 
+        self.conv1_b1 = spconv.SparseSequential(
+            Sparse2DBasicBlockV(16 * double, 16 * double, norm_cfg=norm_cfg, indice_key="res1_1"),
+            Sparse2DBasicBlock(16 * double, 16 * double, norm_cfg=norm_cfg, indice_key="res1_1"),
+        )
+
         self.conv2_b1 = spconv.SparseSequential(
-            Sparse2DBasicBlockV(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2_1"),
-            Sparse2DBasicBlock(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2_1"),
+            SparseConv2d(
+                16 * double, 32 * double, 3, 2, padding=1, bias=False
+            ),  # [376, 376] -> [188, 188]
+            build_norm_layer(norm_cfg, 32 * double)[1],
+            nn.ReLU(),
+            Sparse2DBasicBlock(32 * double, 32 * double, norm_cfg=norm_cfg, indice_key="res2_1"),
+            Sparse2DBasicBlock(32 * double, 32 * double, norm_cfg=norm_cfg, indice_key="res2_1"),
         )
 
         self.conv3_b1 = spconv.SparseSequential(
@@ -290,8 +300,9 @@ class SpMiddleDoublePillarEncoderHAV(nn.Module):
         return block
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
-        sp_tensor1 = self.pillar_pooling2(xyz, xyz_batch_cnt, pt_features)
-        x_conv2_b1 = self.conv2_b1(sp_tensor1)
+        sp_tensor1 = self.pillar_pooling1(xyz, xyz_batch_cnt, pt_features)
+        x_conv1_b1 = self.conv1_b1(sp_tensor1)
+        x_conv2_b1 = self.conv2_b1(x_conv1_b1)
         x_conv3_b1 = self.conv3_b1(x_conv2_b1)
         x_conv4_b1 = self.conv4_b1(x_conv3_b1)
         x_conv4_b1 = x_conv4_b1.dense()
