@@ -72,7 +72,7 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 150, 150],
+        nms_post_max_size=[300, 200, 200],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
     rectifier=[0.68, 0.71, 0.65],
@@ -156,7 +156,7 @@ test_anno = None
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=8,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,

@@ -43,7 +43,7 @@ model = dict(
         tasks=tasks,
         dataset='waymo',
         weight=2,
-        reg_type="IoU",  # IoU GIoU DIoU ODoU
+        reg_type="DIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'iou':(1, 2)}, # (output_channel, num_conv)
     ),
@@ -152,11 +152,11 @@ test_pipeline = [
 
 train_anno = "data/Waymo/infos_train_01sweeps_filter_zero_gt.pkl"
 val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
-test_anno = None
+test_anno = "data/Waymo/infos_test_01sweeps_filter_zero_gt.pkl"
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=8,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -182,6 +182,7 @@ data = dict(
         root_path=data_root,
         info_path=test_anno,
         ann_file=test_anno,
+        test_mode=True,
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,

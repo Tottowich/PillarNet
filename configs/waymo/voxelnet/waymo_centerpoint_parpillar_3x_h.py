@@ -159,8 +159,8 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=4,
+    samples_per_gpu=4,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -169,7 +169,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=train_pipeline,
-        load_interval=4
+        load_interval=1
     ),
     val=dict(
         type=dataset_type,

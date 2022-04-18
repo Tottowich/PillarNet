@@ -20,7 +20,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoder34HA", num_input_features=2, ds_factor=8, double=2,
+        type="PillarEncoderHA", num_input_features=2, ds_factor=8, double=2,
         pc_range=[-75.2, -75.2, -2, 75.2, 75.2, 4],
         pillar_cfg=dict(
             pool0=dict(bev=0.05),
@@ -152,11 +152,11 @@ test_pipeline = [
 
 train_anno = "data/Waymo/infos_train_01sweeps_filter_zero_gt.pkl"
 val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
-test_anno = None
+test_anno = "data/Waymo/infos_test_01sweeps_filter_zero_gt.pkl"
 
 data = dict(
     samples_per_gpu=4,
-    workers_per_gpu=8,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -182,6 +182,7 @@ data = dict(
         root_path=data_root,
         info_path=test_anno,
         ann_file=test_anno,
+        test_mode=True,
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,
