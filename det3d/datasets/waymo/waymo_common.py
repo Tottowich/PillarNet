@@ -32,7 +32,7 @@ TYPE_LIST = ['UNKNOWN', 'VEHICLE', 'PEDESTRIAN', 'SIGN', 'CYCLIST']
 
 def get_obj(path):
     with open(path, 'rb') as f:
-            obj = pickle.load(f)
+        obj = pickle.load(f)
     return obj 
 
 # ignore sign class 

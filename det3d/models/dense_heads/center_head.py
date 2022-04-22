@@ -178,6 +178,8 @@ class CenterHead(nn.Module):
         share_conv_channel=64,
         num_hm_conv=2,
         dcn_head=False,
+        order_class_names=None,
+        **kwargs
     ):
         super(CenterHead, self).__init__()
 
@@ -188,6 +190,13 @@ class CenterHead(nn.Module):
         self.weight = weight  # weight between hm loss and loc loss
         self.dataset = dataset
         self.in_channels = in_channels
+
+        self.class_id_mapping_each_head = []
+        for cur_class_names in self.class_names:
+            cur_class_id_mapping = torch.tensor(
+                [order_class_names.index(x) for x in cur_class_names],
+                dtype=torch.int64).cuda()
+            self.class_id_mapping_each_head.append(cur_class_id_mapping)
 
         self.crit = FastFocalLoss()
         self.crit_reg = RegLoss()
@@ -479,10 +488,8 @@ class CenterHead(nn.Module):
                 if k in ["box3d_lidar", "scores"]:
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
                 elif k in ["label_preds"]:
-                    flag = 0
-                    for j, num_class in enumerate(self.num_classes):
-                        rets[j][i][k] += flag
-                        flag += num_class
+                    for j, cur_class_id_mapping in enumerate(self.class_id_mapping_each_head):
+                        rets[j][i][k] = cur_class_id_mapping[rets[j][i][k]]
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
 
             ret['metadata'] = metas[0][i]
@@ -511,6 +518,8 @@ class CenterHead(nn.Module):
             scores = scores[mask]
             labels = labels[mask]
             iou_preds = torch.clamp(iou_preds[mask], min=0, max=1.)
+
+            # map to o
 
             boxes_for_nms = box_preds[:, [0, 1, 2, 3, 4, 5, -1]]
 

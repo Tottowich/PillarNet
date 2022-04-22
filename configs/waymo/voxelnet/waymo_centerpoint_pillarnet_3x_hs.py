@@ -4,8 +4,8 @@ import logging
 from det3d.utils.config_tool import get_downsample_factor
 
 tasks = [
-    dict(stride=8, class_names=['VEHICLE']),
-    dict(stride=4, class_names=['PEDESTRIAN', 'CYCLIST']),
+    dict(stride=8, class_names=['VEHICLE', 'CYCLIST']),
+    dict(stride=4, class_names=['PEDESTRIAN']),
 ]
 
 class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
@@ -47,6 +47,7 @@ model = dict(
         # reg_type="IoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2)}, # (output_channel, num_conv)
+        order_class_names=['VEHICLE', 'PEDESTRIAN', 'CYCLIST'],
     ),
 )
 
@@ -73,7 +74,7 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 150, 150],
+        nms_post_max_size=[300, 200, 200],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
     rectifier=[0, 0, 0],
