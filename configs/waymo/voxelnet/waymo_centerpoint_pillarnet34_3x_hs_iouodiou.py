@@ -47,6 +47,7 @@ model = dict(
         reg_type="DIoU",  # IoU GIoU DIoU ODoU
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'iou':(1, 2)}, # (output_channel, num_conv)
+        order_class_names=['VEHICLE', 'PEDESTRIAN', 'CYCLIST'],
     ),
 )
 
@@ -73,7 +74,7 @@ test_cfg = dict(
         # nms_iou_threshold=0.7,
         use_multi_class_nms=True,
         nms_pre_max_size=[2048, 1024, 1024],
-        nms_post_max_size=[300, 100, 100],
+        nms_post_max_size=[300, 200, 200],
         nms_iou_threshold=[0.8, 0.55, 0.55],
     ),
     rectifier=[0.68, 0.71, 0.65],
@@ -156,8 +157,8 @@ val_anno = "data/Waymo/infos_val_01sweeps_filter_zero_gt.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=4,
-    workers_per_gpu=4,
+    samples_per_gpu=1,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,
@@ -166,7 +167,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=train_pipeline,
-        load_interval=4
+        load_interval=1
     ),
     val=dict(
         type=dataset_type,

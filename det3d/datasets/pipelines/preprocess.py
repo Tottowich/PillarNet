@@ -25,6 +25,7 @@ def drop_arrays_by_name(gt_names, used_classes):
     inds = np.array(inds, dtype=np.int64)
     return inds
 
+
 @PIPELINES.register_module
 class Preprocess(object):
     def __init__(self, cfg=None, **kwargs):
@@ -112,7 +113,6 @@ class Preprocess(object):
                         [gt_boxes_mask, sampled_gt_masks], axis=0
                     )
                     ct_sampled_boxes = deepcopy(sampled_gt_boxes[sampled_gt_masks])
-                    # ct_sampled_boxes[:, 3:6] *= self.extra_scale
                     sampled_point_indices = box_np_ops.points_in_rbbox2d(points, ct_sampled_boxes)
                     rest_mask = np.ones(len(points), dtype=np.bool)
                     for k in range(sampled_point_indices.shape[1]):

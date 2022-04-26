@@ -4,12 +4,12 @@ import logging
 from det3d.utils.config_tool import get_downsample_factor
 
 tasks = [
-    dict(stride=8, class_names=["car"]),
-    dict(stride=8, class_names=["truck", "construction_vehicle"]),
-    dict(stride=8, class_names=["bus", "trailer"]),
-    dict(stride=8, class_names=["barrier"]),
-    dict(stride=8, class_names=["motorcycle", "bicycle"]),
-    dict(stride=8, class_names=["pedestrian", "traffic_cone"]),
+    dict(num_class=1, class_names=["car"]),
+    dict(num_class=2, class_names=["truck", "construction_vehicle"]),
+    dict(num_class=2, class_names=["bus", "trailer"]),
+    dict(num_class=1, class_names=["barrier"]),
+    dict(num_class=2, class_names=["motorcycle", "bicycle"]),
+    dict(num_class=2, class_names=["pedestrian", "traffic_cone"]),
 ]
 
 class_names = list(itertools.chain(*[t["class_names"] for t in tasks]))
@@ -54,8 +54,7 @@ model = dict(
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2, 1.0, 1.0],
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'vel': (2, 2)},
         share_conv_channel=64,
-        dcn_head=False,
-        order_class_names=class_names
+        dcn_head=False
     ),
 )
 
@@ -84,7 +83,6 @@ test_cfg = dict(
         nms_iou_threshold=0.2,
     ),
     score_threshold=0.1,
-    rectifier=0,
     pc_range=[-54, -54],
     out_size_factor=get_downsample_factor(model),
     voxel_size=[0.075, 0.075]
@@ -129,8 +127,6 @@ db_sampler = dict(
         dict(filter_by_difficulty=[-1],),
     ],
     global_random_rotation_range_per_object=[0, 0],
-    rate=1.0,
-    extra_scale=1
 )
 train_preprocessor = dict(
     mode="train",
@@ -177,8 +173,8 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=12,
+    samples_per_gpu=4,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,
