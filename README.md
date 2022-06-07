@@ -9,7 +9,7 @@
 
 This is the official implementation of PillarNet, a simple and high-performance pillar-based framework for 3D object detection. For more details, please refer to: 
 
-<p align="center"> <img src='docs/pipeline.png' align="center" height="230px"> </p>
+<p align="center"> <img src='docs/pipeline.bmp' align="center" height="230px"> </p>
 
     @article{shi2022pillarnet,
       title={PillarNet: Real-Time and High-Performance Pillar-based 3D Object Detection},
