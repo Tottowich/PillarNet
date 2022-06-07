@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from torch import nn
-
 try:
     import spconv.pytorch as spconv
     from spconv.pytorch import ops
@@ -11,7 +10,6 @@ except:
 
 from timm.models.layers import DropPath
 from ..utils import build_norm_layer
-
 
 def replace_feature(out, new_features):
     if "replace_feature" in out.__dir__():
@@ -119,7 +117,6 @@ def conv2D1x1(in_planes, out_planes, bias=False):
             # indice_key=indice_key,
         )
 
-
 class Sparse2DBasicBlock(spconv.SparseModule):
     expansion = 1
 
@@ -128,16 +125,18 @@ class Sparse2DBasicBlock(spconv.SparseModule):
         inplanes,
         planes,
         stride=1,
+        dilation=1,
         norm_cfg=None,
         indice_key=None,
     ):
         super(Sparse2DBasicBlock, self).__init__()
-        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        if norm_cfg is None:
+            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
         bias = norm_cfg is not None
 
         self.conv1 = spconv.SparseSequential(
-            conv2D3x3(planes, planes, stride, indice_key=indice_key, bias=bias),
+            conv2D3x3(inplanes, planes, stride, dilation=dilation, indice_key=indice_key, bias=bias),
             build_norm_layer(norm_cfg, planes)[1]
         )
         self.conv2 = spconv.SparseSequential(
@@ -145,6 +144,7 @@ class Sparse2DBasicBlock(spconv.SparseModule):
             build_norm_layer(norm_cfg, planes)[1]
         )
         self.relu = nn.ReLU()
+        self.stride = stride
 
     def forward(self, x):
         identity = x.features
@@ -158,7 +158,6 @@ class Sparse2DBasicBlock(spconv.SparseModule):
 
         return out
 
-
 class Sparse2DBasicBlockV(spconv.SparseModule):
     expansion = 1
 
@@ -171,7 +170,8 @@ class Sparse2DBasicBlockV(spconv.SparseModule):
         indice_key=None,
     ):
         super(Sparse2DBasicBlockV, self).__init__()
-        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
+        if norm_cfg is None:
+            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
 
         bias = norm_cfg is not None
 
@@ -199,182 +199,6 @@ class Sparse2DBasicBlockV(spconv.SparseModule):
 
         out = replace_feature(out, out.features + identity)
         out = replace_feature(out, self.relu(out.features))
-
-        return out
-
-
-class Sparse2DAttBlock(spconv.SparseModule):
-    expansion = 1
-
-    def __init__(
-        self,
-        inplanes,
-        planes,
-        kernel_size=7,
-        stride=1,
-        norm_cfg=None,
-        indice_key=None,
-    ):
-        super(Sparse2DAttBlock, self).__init__()
-        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        bias = norm_cfg is not None
-
-        self.conv1 = spconv.SparseSequential(
-            spconv.SubMConv2d(inplanes, planes, 3, stride, padding=1, indice_key=indice_key, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1],
-            nn.ReLU()
-        )
-
-        self.conv2 = spconv.SubMConv2d(2, 1, kernel_size, stride, padding=kernel_size // 2, bias=True)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        feat = x.features
-
-        max_pool, _ = torch.max(feat, dim=1, keepdim=True)
-        avg_pool = torch.mean(feat, dim=1, keepdim=True)
-        feat = torch.cat((max_pool, avg_pool), dim=1)
-        x = replace_feature(x, feat)
-        x = self.conv2(x)
-        x = replace_feature(x, torch.sigmoid(x.features))
-
-        return x
-
-
-class Sparse2DBottleneckV(spconv.SparseModule):
-    expansion = 4
-    def __init__(self,
-                 inplanes,
-                 planes,
-                 stride=1,
-                 norm_cfg=None,
-                 indice_key=None,
-                 ):
-        super(Sparse2DBottleneckV, self).__init__()
-        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        bias = norm_cfg is not None
-
-        self.conv0 = spconv.SparseSequential(
-            conv2D3x3(inplanes, planes * self.expansion, 1, indice_key=indice_key, bias=bias),
-            build_norm_layer(norm_cfg, planes*self.expansion)[1]
-        )
-        self.conv1 = spconv.SparseSequential(
-            conv2D1x1(planes * self.expansion, planes, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.conv2 = spconv.SparseSequential(
-            conv2D3x3(planes, planes, indice_key=indice_key, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.conv3 = spconv.SparseSequential(
-            conv2D1x1(planes, planes * self.expansion, bias=bias),
-            build_norm_layer(norm_cfg, planes * self.expansion)[1]
-        )
-        self.relu = nn.ReLU()
-        self.stride = stride
-
-    def forward(self, x):
-        x = self.conv0(x)
-        identity = x.features
-
-        out = self.conv1(x)
-        out = replace_feature(out, self.relu(out.features))
-        out = self.conv2(out)
-        out = replace_feature(out, self.relu(out.features))
-        out = self.conv3(out)
-
-        out = replace_feature(out, out.features + identity)
-        out = replace_feature(out, self.relu(out.features))
-
-        return out
-
-
-class Sparse2DBottleneck(spconv.SparseModule):
-    expansion = 4
-
-    def __init__(self,
-                 inplanes,
-                 stride=1,
-                 norm_cfg=None,
-                 indice_key=None,
-                 ):
-        super(Sparse2DBottleneck, self).__init__()
-        norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        bias = norm_cfg is not None
-        planes = inplanes // self.expansion
-
-        self.conv1 = spconv.SparseSequential(
-            conv2D1x1(inplanes, planes, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.conv2 = spconv.SparseSequential(
-            conv2D3x3(planes, planes, indice_key=indice_key, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.conv3 = spconv.SparseSequential(
-            conv2D1x1(planes, inplanes, bias=bias),
-            build_norm_layer(norm_cfg, inplanes)[1]
-        )
-        self.relu = nn.ReLU()
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x.features
-
-        out = self.conv1(x)
-        out = replace_feature(out, self.relu(out.features))
-        out = self.conv2(out)
-        out = replace_feature(out, self.relu(out.features))
-        out = self.conv3(out)
-
-        out = replace_feature(out, out.features + identity)
-        out = replace_feature(out, self.relu(out.features))
-
-        return out
-
-
-class Dense2DBottleneck(spconv.SparseModule):
-    expansion = 4
-
-    def __init__(self,
-                 inplanes,
-                 stride=1,
-                 norm_cfg=None,
-                 ):
-        super(Dense2DBottleneck, self).__init__()
-        norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
-        bias = norm_cfg is not None
-        planes = inplanes // self.expansion
-
-        self.conv1 = spconv.SparseSequential(
-            nn.Conv2d(inplanes, planes, 1, stride=stride, padding=0, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1],
-        )
-        self.conv2 = spconv.SparseSequential(
-            nn.Conv2d(planes, planes, 3, stride=stride, padding=1, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.conv3 = spconv.SparseSequential(
-            nn.Conv2d(planes, inplanes, 1, stride=stride, padding=0, bias=bias),
-            build_norm_layer(norm_cfg, planes)[1]
-        )
-        self.relu = nn.ReLU()
-        self.stride = stride
-
-    def forward(self, x):
-        identity = x
-
-        out = self.conv1(x)
-        out = self.relu(out)
-        out = self.conv2(out)
-        out = self.relu(out)
-        out = self.conv3(out)
-
-        out += identity
-        out = self.relu(out)
 
         return out
 
@@ -639,5 +463,3 @@ class Sparse2DMerge(spconv.SparseModule):
 
         x = replace_feature(x, x.features + pool)
         return x
-
-

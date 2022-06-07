@@ -9,8 +9,7 @@ from .registry import (
     NECKS,
     READERS,
     SECOND_STAGE,
-    ROI_HEAD,
-    POINT_HEAD,
+    ROI_HEAD
 )
 
 
@@ -21,17 +20,11 @@ def build(cfg, registry, default_args=None):
     else:
         return build_from_cfg(cfg, registry, default_args)
 
-
 def build_second_stage_module(cfg):
     return build(cfg, SECOND_STAGE)
 
-
 def build_roi_head(cfg):
     return build(cfg, ROI_HEAD)
-
-
-def build_point_head(cfg):
-    return build(cfg, POINT_HEAD)
 
 
 def build_reader(cfg):

@@ -41,17 +41,3 @@ int scatter_max_grad_wrapper(at::Tensor arg_tensor, at::Tensor grad_out_tensor, 
     return 1;
 }
 
-int update_index_kernel_wrapper(at::Tensor index2bev_tensor, at::Tensor index_tensor){
-    // index2bev: (N)  index: (L)
-    CHECK_INPUT(index2bev_tensor);
-    CHECK_INPUT(index_tensor);
-
-    int L = index_tensor.size(0);
-
-    int *index = index_tensor.data_ptr<int>();
-    const int *index2bev = index2bev_tensor.data_ptr<int>();
-
-    // get the index of the out
-    update_index_kernel_launcher(L, index2bev, index);
-    return 1;
-}

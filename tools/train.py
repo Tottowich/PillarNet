@@ -4,7 +4,7 @@ import os
 import sys
 import time
 import datetime
-from numba.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning, NumbaWarning
+from numba.core.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning, NumbaWarning
 import warnings
 warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
 warnings.simplefilter('ignore', category=NumbaWarning)
@@ -106,12 +106,12 @@ def main():
     if args.local_rank == 0:
         # copy important files to backup
         backup_dir = os.path.join(cfg.work_dir, time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()))
-        os.makedirs(backup_dir, exist_ok=True)
-        os.system("cp -r tools %s/" % backup_dir)
-        os.system("cp -r det3d %s/" % backup_dir)
-        os.system("cp -r configs %s/" % backup_dir)
-        os.system("cp -r %s %s/" % (args.config, cfg.work_dir))
-        logger.info(f"Backup source files to {backup_dir}")
+        # os.makedirs(backup_dir, exist_ok=True)
+        # os.system("cp -r tools %s/" % backup_dir)
+        # os.system("cp -r det3d %s/" % backup_dir)
+        # os.system("cp -r configs %s/" % backup_dir)
+        # os.system("cp -r %s %s/" % (args.config, cfg.work_dir))
+        # logger.info(f"Backup source files to {backup_dir}")
 
     tb_logger = None
     if args.local_rank == 0:

@@ -18,7 +18,6 @@ class DataBaseSamplerV2:
         db_prepor=None,
         rate=1.0,
         global_rot_range=None,
-        extra_scale=1.2,
         logger=None,
     ):
         for k, v in db_infos.items():
@@ -32,7 +31,6 @@ class DataBaseSamplerV2:
 
         self.db_infos = db_infos
         self._rate = rate
-        self._extra_scale = extra_scale
         self._groups = groups
         self._group_db_infos = {}
         self._group_name_to_names = []
@@ -249,13 +247,13 @@ class DataBaseSamplerV2:
             ret = self._sampler_dict[name].sample(num)
             return ret, np.ones((len(ret),), dtype=np.int64)
 
-    def sample_class_v2(self, name, num, gt_boxes):
+    def sample_class_v2(self, name, num, gt_boxes, extra_scale=1.5):
         sampled = self._sampler_dict[name].sample(num)
         sampled = copy.deepcopy(sampled)
         num_gt = gt_boxes.shape[0]
         num_sampled = len(sampled)
         gt_boxes_bv = box_np_ops.center_to_corner_box2d(
-            gt_boxes[:, 0:2], gt_boxes[:, 3:5], gt_boxes[:, -1]
+            gt_boxes[:, 0:2], gt_boxes[:, 3:5] * extra_scale, gt_boxes[:, -1]
         )
 
         sp_boxes = np.stack([i["box3d_lidar"] for i in sampled], axis=0)
@@ -273,7 +271,7 @@ class DataBaseSamplerV2:
 
         sp_boxes_new = boxes[gt_boxes.shape[0] :]
         sp_boxes_bv = box_np_ops.center_to_corner_box2d(
-            sp_boxes_new[:, 0:2], sp_boxes_new[:, 3:5] * self._extra_scale, sp_boxes_new[:, -1]
+            sp_boxes_new[:, 0:2], sp_boxes_new[:, 3:5] * extra_scale, sp_boxes_new[:, -1]
         )
 
         total_bv = np.concatenate([gt_boxes_bv, sp_boxes_bv], axis=0)

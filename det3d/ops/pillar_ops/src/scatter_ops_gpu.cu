@@ -57,27 +57,6 @@ __global__ void scatter_max_grad_kernel(int C, int M, const int *arg, const floa
     grad_src[arg[0]] = grad_out[0];
 }
 
-__global__ void updateIndexKernel(int L, const int *index2bev, int *index){
-    // index2bev: (N, )  index: (L, )
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid >= L) return;
-
-    index[tid] = index2bev[index[tid]];
-}
-
-void update_index_kernel_launcher(int L, const int *index2bev, int *index){
-    cudaError_t err;
-    dim3 blocks(DIVUP(L, THREADS_PER_BLOCK));  // blockIdx.x(col), blockIdx.y(row)
-    dim3 threads(THREADS_PER_BLOCK);
-
-    updateIndexKernel<<<blocks, threads>>>(L, index2bev, index);
-    // cudaDeviceSynchronize();  // for using printf in kernel function
-    err = cudaGetLastError();
-    if (cudaSuccess != err) {
-        fprintf(stderr, "CUDA kernel failed (scatter_max_grad_kernel) : %s\n", cudaGetErrorString(err));
-        exit(-1);
-    }
-}
 
 void scatter_max_kernel_launcher(int C, int L, int M, const int *index, const float *src, int *arg, float *out) {
     cudaError_t err;

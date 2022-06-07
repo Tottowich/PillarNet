@@ -178,9 +178,7 @@ class CenterIoUHead(nn.Module):
         share_conv_channel=64,
         num_hm_conv=2,
         dcn_head=False,
-        order_class_names=None,
-        reg_type="DIoU",
-        **kwargs
+        reg_type="DIoU"
     ):
         super(CenterIoUHead, self).__init__()
 
@@ -193,13 +191,6 @@ class CenterIoUHead(nn.Module):
 
         self.in_channels = in_channels
         self.num_classes = num_classes
-
-        self.class_id_mapping_each_head = []
-        for cur_class_names in self.class_names:
-            cur_class_id_mapping = torch.tensor(
-                [order_class_names.index(x) for x in cur_class_names],
-                dtype=torch.int64).cuda()
-            self.class_id_mapping_each_head.append(cur_class_id_mapping)
 
         self.crit = FastFocalLoss()
         self.crit_reg = RegLoss()
@@ -498,8 +489,10 @@ class CenterIoUHead(nn.Module):
                 if k in ["box3d_lidar", "scores"]:
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
                 elif k in ["label_preds"]:
-                    for j, cur_class_id_mapping in enumerate(self.class_id_mapping_each_head):
-                        rets[j][i][k] = cur_class_id_mapping[rets[j][i][k]]
+                    flag = 0
+                    for j, num_class in enumerate(self.num_classes):
+                        rets[j][i][k] += flag
+                        flag += num_class
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
 
             ret['metadata'] = metas[0][i]
@@ -535,28 +528,27 @@ class CenterIoUHead(nn.Module):
                 centers = boxes_for_nms[:, [0, 1]]
                 boxes = torch.cat([centers, scores.view(-1, 1)], dim=1)
                 selected = _circle_nms(boxes, min_radius=test_cfg.min_radius[task_id],
-                                       post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                                       post_max_size=test_cfg.nms.nms_post_max_size)
 
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_rotate_nms', False):
-                assert isinstance(test_cfg.rectifier, float)
-                scores = torch.pow(scores, 1 - test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
+                scores = torch.pow(scores, 1-test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
                 selected = box_torch_ops.rotate_nms_pcdet(boxes_for_nms.float(), scores.float(),
-                                                          thresh=test_cfg.nms.nms_iou_threshold[task_id],
-                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
-                                                          post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                                                          thresh=test_cfg.nms.nms_iou_threshold,
+                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size,
+                                                          post_max_size=test_cfg.nms.nms_post_max_size)
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_multi_class_nms', False):
                 selected_boxes, selected_scores, selected_labels = box_torch_ops.rotate_class_specific_nms_pcdet(
                     boxes_for_nms.float(), scores.float(), iou_preds, box_preds, labels, num_class,
-                    test_cfg.rectifier[task_id],
-                    thresh=test_cfg.nms.nms_iou_threshold[task_id],
-                    pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
-                    post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                    test_cfg.rectifier,
+                    thresh=test_cfg.nms.nms_iou_threshold,
+                    pre_maxsize=test_cfg.nms.nms_pre_max_size,
+                    post_max_size=test_cfg.nms.nms_post_max_size)
             else:
                 raise NotImplementedError
 

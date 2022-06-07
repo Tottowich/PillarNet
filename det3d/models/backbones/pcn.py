@@ -14,9 +14,9 @@ from timm.models.layers import trunc_normal_
 from ..registry import BACKBONES
 from ..utils import build_norm_layer
 from .base import conv2D3x3, Sparse2DBasicBlock, Sparse2DBasicBlockV, Sparse2DMerge, Sparse2DInverseBasicBlock, \
-    Dense2DBasicBlock, Dense2DInverseBasicBlock, Sparse2DBottleneck, Sparse2DBottleneckV, Dense2DBottleneck
+    Dense2DBasicBlock, Dense2DInverseBasicBlock
 
-from det3d.ops.pillar_ops.pillar_modules import PillarMaxPoolingV1a, PillarMaxPoolingV2a, PillarMaxPoolingV2a1
+from det3d.ops.pillar_ops.pillar_modules import PillarMaxPoolingV2a
 
 
 def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stride=1, padding=0,
@@ -124,91 +124,6 @@ class PillarEncoderHA(nn.Module):
             x_conv4=x_conv4,
             x_conv5=x_conv5
         )
-
-
-@BACKBONES.register_module
-class PillarEncoderLHA(nn.Module):
-    def __init__(
-            self, norm_cfg=None, pillar_cfg=None,
-            num_input_features=2, double=2,
-            pc_range=[-75.2, -75.2, 75.2, 75.2],
-            name="PillarEncoder", **kwargs
-    ):
-        super(PillarEncoderLHA, self).__init__()
-        self.name = name
-
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        self.pillar_pooling0 = PillarMaxPoolingV2a(
-            # radius=pillar_cfg['pool1']['radius'],
-            mlps=[6 + num_input_features, 8*double],
-            norm_cfg=norm_cfg,
-            bev_size=pillar_cfg['pool0']['bev'],
-            point_cloud_range=pc_range
-        )  # [752, 752]
-
-        block = post_act_block
-        dense_block = post_act_block_dense
-        self.conv0 = spconv.SparseSequential(
-            spconv.SubMConv2d(8*double, 8*double, 3, padding=1, bias=False, indice_key="subm1"),
-            build_norm_layer(norm_cfg, 8*double)[1],
-            block(8*double, 8*double, 3, norm_cfg=norm_cfg, indice_key="subm1"),
-        )
-
-        self.conv1 = spconv.SparseSequential(
-            # [1600, 1408, 41] <- [800, 704, 21]
-            block(8 * double, 16 * double, 3, norm_cfg=norm_cfg, stride=2, padding=1, indice_key='spconv1',
-                  conv_type='spconv'),
-            block(16 * double, 16 * double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm1'),
-            block(16 * double, 16 * double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm1'),
-        )
-
-        self.conv2 = spconv.SparseSequential(
-            # [1600, 1408, 41] <- [800, 704, 21]
-            block(16*double, 32*double, 3, norm_cfg=norm_cfg, stride=2, padding=1, indice_key='spconv2', conv_type='spconv'),
-            block(32*double, 32*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm2'),
-            block(32*double, 32*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm2'),
-        )
-
-        self.conv3 = spconv.SparseSequential(
-            # [800, 704, 21] <- [400, 352, 11]
-            block(32*double, 64*double, 3, norm_cfg=norm_cfg, stride=2, padding=1, indice_key='spconv3', conv_type='spconv'),
-            block(64*double, 64*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm3'),
-            block(64*double, 64*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm3'),
-        )
-
-        self.conv4 = spconv.SparseSequential(
-            # [400, 352, 11] <- [200, 176, 5]
-            block(64*double, 128*double, 3, norm_cfg=norm_cfg, stride=2, padding=1, indice_key='spconv4', conv_type='spconv'),
-            block(128*double, 128*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm4'),
-            block(128*double, 128*double, 3, norm_cfg=norm_cfg, padding=1, indice_key='subm4'),
-        )
-        norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
-        self.conv5 = nn.Sequential(
-            dense_block(128 * double, 256, 3, norm_cfg=norm_cfg, stride=2, padding=1),
-            dense_block(256, 256, 3, norm_cfg=norm_cfg, padding=1),
-            dense_block(256, 256, 3, norm_cfg=norm_cfg, padding=1),
-        )
-
-    def forward(self, xyz, xyz_batch_cnt, pt_features):
-        sp_tensor = self.pillar_pooling0(xyz, xyz_batch_cnt, pt_features)
-        x_conv0 = self.conv0(sp_tensor)
-        x_conv1 = self.conv1(x_conv0)
-        x_conv2 = self.conv2(x_conv1)
-        x_conv3 = self.conv3(x_conv2)
-        x_conv4 = self.conv4(x_conv3)
-        x_conv4 = x_conv4.dense()
-        x_conv5 = self.conv5(x_conv4)
-
-        return dict(
-            # x_conv1=x_conv1,
-            # x_conv2=x_conv2,
-            # x_conv3=x_conv3,
-            x_conv4=x_conv4,
-            x_conv5=x_conv5
-        )
-
 
 @BACKBONES.register_module
 class PillarEncoder2xHA(nn.Module):
@@ -1007,100 +922,6 @@ class SpMiddlePillarEncoderHA(nn.Module):
 
 
 @BACKBONES.register_module
-class SpMiddlePillarEncoderLHA(nn.Module):
-    def __init__(
-            self, norm_cfg=None, pillar_cfg=None,
-            num_input_features=2, double=2,
-            pc_range=[-75.2, -75.2, 75.2, 75.2],
-            name="SpMiddlePillarEncoderHA", **kwargs
-    ):
-        super(SpMiddlePillarEncoderLHA, self).__init__()
-        self.name = name
-
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        self.pillar_pooling0 = PillarMaxPoolingV2a(
-            # radius=pillar_cfg['pool1']['radius'],
-            mlps=[6 + num_input_features, 8 * double],
-            norm_cfg=norm_cfg,
-            bev_size=pillar_cfg['pool0']['bev'],
-            point_cloud_range=pc_range
-        )  # [752, 752]
-
-        self.conv0 = spconv.SparseSequential(
-            Sparse2DBasicBlockV(8 * double, 8 * double, norm_cfg=norm_cfg, indice_key="res0"),
-            Sparse2DBasicBlock(8 * double, 8 * double, norm_cfg=norm_cfg, indice_key="res0"),
-        )
-
-        self.conv1 = spconv.SparseSequential(
-            SparseConv2d(
-                8 * double, 16 * double, 3, 2, padding=1, bias=False
-            ),  # [752, 752] -> [376, 376]
-            build_norm_layer(norm_cfg, 16 * double)[1],
-            nn.ReLU(),
-            Sparse2DBasicBlock(16 * double, 16 * double, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBasicBlock(16 * double, 16 * double, norm_cfg=norm_cfg, indice_key="res1"),
-        )
-
-        self.conv2 = spconv.SparseSequential(
-            SparseConv2d(
-                16*double, 32*double, 3, 2, padding=1, bias=False
-            ),  # [752, 752] -> [376, 376]
-            build_norm_layer(norm_cfg, 32*double)[1],
-            nn.ReLU(),
-            Sparse2DBasicBlock(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBasicBlock(32*double, 32*double, norm_cfg=norm_cfg, indice_key="res2"),
-        )
-
-        self.conv3 = spconv.SparseSequential(
-            SparseConv2d(
-                32*double, 64*double, 3, 2, padding=1, bias=False
-            ),  # [376, 376] -> [188, 188]
-            build_norm_layer(norm_cfg, 64*double)[1],
-            nn.ReLU(),
-            Sparse2DBasicBlock(64*double, 64*double, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBasicBlock(64*double, 64*double, norm_cfg=norm_cfg, indice_key="res3"),
-        )
-
-        self.conv4 = spconv.SparseSequential(
-            SparseConv2d(
-                64*double, 128*double, 3, 2, padding=1, bias=False
-            ),
-            build_norm_layer(norm_cfg, 128*double)[1],
-            nn.ReLU(),
-            Sparse2DBasicBlock(128*double, 128*double, norm_cfg=norm_cfg, indice_key="res4"),
-            Sparse2DBasicBlock(128*double, 128*double, norm_cfg=norm_cfg, indice_key="res4"),
-        )
-
-        norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
-        self.conv5 = nn.Sequential(
-            nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
-            build_norm_layer(norm_cfg, 256)[1],
-            nn.ReLU(),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
-        )
-
-    def forward(self, xyz, xyz_batch_cnt, pt_features):
-        sp_tensor = self.pillar_pooling0(xyz, xyz_batch_cnt, pt_features)
-        x_conv0 = self.conv0(sp_tensor)
-        x_conv1 = self.conv1(x_conv0)
-        x_conv2 = self.conv2(x_conv1)
-        x_conv3 = self.conv3(x_conv2)
-        x_conv4 = self.conv4(x_conv3)
-        x_conv4 = x_conv4.dense()
-        x_conv5 = self.conv5(x_conv4)
-        return dict(
-            # x_conv1=x_conv1,
-            # x_conv2=x_conv2,
-            # x_conv3=x_conv3,
-            x_conv4=x_conv4,
-            x_conv5=x_conv5
-        )
-
-
-@BACKBONES.register_module
 class SpMiddlePillarEncoder34HA(nn.Module):
     def __init__(
             self, norm_cfg=None, pillar_cfg=None,
@@ -1170,7 +991,6 @@ class SpMiddlePillarEncoder34HA(nn.Module):
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
@@ -1264,7 +1084,6 @@ class SpMiddlePillarEncoder34x2HA(nn.Module):
             nn.ReLU(),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
@@ -1356,7 +1175,6 @@ class SpMiddlePillarEncoder34x4HA(nn.Module):
             nn.ReLU(),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
 
     def forward(self, xyz, xyz_batch_cnt, pt_features):
@@ -1379,7 +1197,7 @@ class SpMiddlePillarEncoder34x4HA(nn.Module):
 class SpMiddlePillarEncoder34x8HA(nn.Module):
     def __init__(
             self, norm_cfg=None, pillar_cfg=None,
-            num_input_features=2, double=2, num_layers=2,
+            num_input_features=2, double=2,
             pc_range=[-75.2, -75.2, 75.2, 75.2],
             name="SpMiddlePillarEncoder34x8HA", **kwargs
     ):
@@ -1429,10 +1247,6 @@ class SpMiddlePillarEncoder34x8HA(nn.Module):
         #     Sparse2DBasicBlock(64 * double, 64 * double, norm_cfg=norm_cfg, indice_key="res3"),
         # )
 
-        layer_blocks = []
-        for _ in range(num_layers):
-            layer_blocks.append(Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"))
-
         self.conv4 = spconv.SparseSequential(
             # SparseConv2d(
             #     64*double, 128*double, 3, 2, padding=1, bias=False
@@ -1440,18 +1254,15 @@ class SpMiddlePillarEncoder34x8HA(nn.Module):
             # build_norm_layer(norm_cfg, 128*double)[1],
             # nn.ReLU(),
             Sparse2DBasicBlockV(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"),
-            # Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"),
-            # Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"),
+            Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"),
+            Sparse2DBasicBlock(128 * double, 128 * double, norm_cfg=norm_cfg, indice_key="res4"),
         )
-
-        self.conv4_layers = spconv.SparseSequential(*layer_blocks)
 
         norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
         self.conv5 = nn.Sequential(
             nn.Conv2d(128 * double, 256, 3, 2, padding=1, bias=False),
             build_norm_layer(norm_cfg, 256)[1],
             nn.ReLU(),
-            Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
             Dense2DBasicBlock(256, 256, norm_cfg=norm_cfg),
         )
@@ -1462,7 +1273,6 @@ class SpMiddlePillarEncoder34x8HA(nn.Module):
         # x_conv2 = self.conv2(x_conv1)
         # x_conv3 = self.conv3(sp_tensor)
         x_conv4 = self.conv4(sp_tensor)
-        x_conv4 = self.conv4_layers(x_conv4)
         x_conv4 = x_conv4.dense()
         x_conv5 = self.conv5(x_conv4)
         return dict(
@@ -2186,98 +1996,3 @@ class SpMiddlePillarEncoderNeckMergeF(nn.Module):
         ret = x_conv4.dense()
 
         return ret, None
-
-
-@BACKBONES.register_module
-class SpMiddlePillarEncoder50HA(nn.Module):
-    def __init__(
-            self, norm_cfg=None, pillar_cfg=None,
-            num_input_features=2, double=2,
-            pc_range=[-75.2, -75.2, 75.2, 75.2],
-            name="SpMiddlePillarEncoder", **kwargs
-    ):
-        super(SpMiddlePillarEncoder50HA, self).__init__()
-        self.name = name
-
-        if norm_cfg is None:
-            norm_cfg = dict(type="BN1d", eps=1e-3, momentum=0.01)
-
-        self.pillar_pooling1 = PillarMaxPoolingV2a(
-            # radius=pillar_cfg['pool1']['radius'],
-            mlps=[6 + num_input_features, 16*double],
-            norm_cfg=norm_cfg,
-            bev_size=pillar_cfg['pool1']['bev'],
-            point_cloud_range=pc_range
-        )  # [752, 752]
-
-        expansion = Sparse2DBottleneck.expansion
-        self.conv1 = spconv.SparseSequential(
-            Sparse2DBottleneckV(16*double, 16*double, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
-            Sparse2DBottleneck(16*double*expansion, norm_cfg=norm_cfg, indice_key="res1"),
-        )
-
-        self.conv2 = spconv.SparseSequential(
-            SparseConv2d(
-                16*double*expansion, 32*double*expansion, 3, 2, padding=1, bias=False
-            ),  # [752, 752] -> [376, 376]
-            build_norm_layer(norm_cfg, 32*double*expansion)[1],
-            nn.ReLU(),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-            Sparse2DBottleneck(32*double*expansion, norm_cfg=norm_cfg, indice_key="res2"),
-        )
-
-        self.conv3 = spconv.SparseSequential(
-            SparseConv2d(
-                32*double*expansion, 64*double*expansion, 3, 2, padding=1, bias=False
-            ),  # [376, 376] -> [188, 188]
-            build_norm_layer(norm_cfg, 64*double*expansion)[1],
-            nn.ReLU(),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-            Sparse2DBottleneck(64*double*expansion, norm_cfg=norm_cfg, indice_key="res3"),
-        )
-
-        self.conv4 = spconv.SparseSequential(
-            SparseConv2d(
-                64*double*expansion, 128*double*expansion, 3, 2, padding=1, bias=False
-            ),
-            build_norm_layer(norm_cfg, 128*double*expansion)[1],
-            nn.ReLU(),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
-            Sparse2DBottleneck(128*double*expansion, norm_cfg=norm_cfg, indice_key="res4"),
-        )
-
-        norm_cfg = dict(type="BN", eps=1e-3, momentum=0.01)
-        self.conv5 = nn.Sequential(
-            nn.Conv2d(
-                128 * double * expansion, 256, 3, 2, padding=1, bias=False
-            ),
-            build_norm_layer(norm_cfg, 256)[1],
-            nn.ReLU(),
-            Dense2DBasicBlock(256, 256),
-            Dense2DBasicBlock(256, 256),
-            Dense2DBasicBlock(256, 256),
-        )
-
-    def forward(self, xyz, xyz_batch_cnt, pt_features):
-        sp_tensor = self.pillar_pooling1(xyz, xyz_batch_cnt, pt_features)
-        x_conv1 = self.conv1(sp_tensor)
-        x_conv2 = self.conv2(x_conv1)
-        x_conv3 = self.conv3(x_conv2)
-        x_conv4 = self.conv4(x_conv3)
-        x_conv4 = x_conv4.dense()
-        x_conv5 = self.conv5(x_conv4)
-        return dict(
-            # x_conv1=x_conv1,
-            # x_conv2=x_conv2,
-            # x_conv3=x_conv3,
-            x_conv4=x_conv4,
-            x_conv5=x_conv5
-        )

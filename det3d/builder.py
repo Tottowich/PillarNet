@@ -217,7 +217,7 @@ def build_dbsampler(cfg, logger=None):
     if len(grot_range) == 0:
         grot_range = None
     sampler = DataBaseSamplerV2(
-        db_infos, groups, db_prepor, rate, grot_range, logger=logger, extra_scale=extra_scale
+        db_infos, groups, db_prepor, rate, grot_range, extra_scale, logger=logger
     )
 
     return sampler

@@ -3,7 +3,6 @@ from torch import nn
 from torch.nn import functional as F
 
 from ..registry import READERS
-from det3d.ops.points_ops import points_utils
 
 
 @READERS.register_module
@@ -108,14 +107,6 @@ class VoxelDownsample(nn.Module):
         pt_features = []
         xyz_batch_cnt = []
         for points in points_list:
-            if self.method == 'unique':
-                points = points_utils.voxel_unique_sample(self.voxel, self.pc_range, points)
-            elif self.method == 'average':
-                points = points_utils.voxel_average_sample(self.voxel, self.max_points,
-                                                           self.pc_range, points)
-            else:
-                raise NotImplementedError
-
             points = self.absl_to_relative(points)
 
             xyz_batch_cnt.append(len(points))

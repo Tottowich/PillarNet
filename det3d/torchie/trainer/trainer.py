@@ -60,8 +60,6 @@ def example_to_device(example, device, non_blocking=False) -> dict:
             example_torch[k] = calib
         elif k == "points":
             example_torch[k] = [v1.to(device, non_blocking=non_blocking) for v1 in v]
-        elif k == "raw_gt_box":
-            example_torch[k] = [[rr.to(device, non_blocking=non_blocking) for rr in res] for res in v]
         else:
             example_torch[k] = v
 
@@ -372,11 +370,7 @@ class Trainer(object):
         self.call_hook("after_data_to_device")
 
         if train_mode:
-            # from thop import profile, clever_format
             losses = model(example, return_loss=True)
-            # macs, params = profile(model, inputs=(example,))
-            # macs, params = clever_format([macs, params], "%.3f")
-
             self.call_hook("after_forward")
             loss, log_vars = parse_second_losses(losses)
             del losses

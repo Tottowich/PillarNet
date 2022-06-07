@@ -40,11 +40,6 @@ class RoIHead(RoIHeadTemplate):
         self.cls_layers = self.make_fc_layers(
             input_channels=pre_channel, output_channels=self.num_class, fc_list=self.model_cfg.CLS_FC
         )
-        self.iou_layers = None
-        if 'IOU_FC' in self.model_cfg.keys():
-            self.iou_layers = self.make_fc_layers(
-                input_channels=pre_channel, output_channels=1, fc_list=self.model_cfg.IOU_FC
-            )
         self.reg_layers = self.make_fc_layers(
             input_channels=pre_channel,
             output_channels=code_size,
@@ -85,7 +80,8 @@ class RoIHead(RoIHeadTemplate):
             batch_dict['roi_features'] = targets_dict['roi_features']
 
         # RoI aware pooling
-        pooled_features = batch_dict['roi_features'].reshape(-1, 1, batch_dict['roi_features'].shape[-1]).contiguous()  # (BxN, 1, C)
+        pooled_features = batch_dict['roi_features'].reshape(-1, 1,
+            batch_dict['roi_features'].shape[-1]).contiguous()  # (BxN, 1, C)
 
         batch_size_rcnn = pooled_features.shape[0]
         pooled_features = pooled_features.permute(0, 2, 1).contiguous() # (BxN, C, 1)
@@ -94,10 +90,6 @@ class RoIHead(RoIHeadTemplate):
         rcnn_cls = self.cls_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, 1 or 2)
         rcnn_reg = self.reg_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, C)
 
-        rcnn_iou = None
-        if self.iou_layers is not None:
-            rcnn_iou = self.iou_layers(shared_features).transpose(1, 2).contiguous().squeeze(dim=1)  # (B, 1)
-
         if not training:
             batch_cls_preds, batch_box_preds = self.generate_predicted_boxes(
                 batch_size=batch_dict['batch_size'], rois=batch_dict['rois'], cls_preds=rcnn_cls, box_preds=rcnn_reg
@@ -105,12 +97,10 @@ class RoIHead(RoIHeadTemplate):
             batch_dict['batch_cls_preds'] = batch_cls_preds
             batch_dict['batch_box_preds'] = batch_box_preds
             batch_dict['cls_preds_normalized'] = False
-            batch_dict['batch_iou_preds'] = rcnn_iou.view(batch_dict['batch_size'], -1, 1) if rcnn_iou is not None else None
         else:
             targets_dict['rcnn_cls'] = rcnn_cls
             targets_dict['rcnn_reg'] = rcnn_reg
-            targets_dict['rcnn_iou'] = rcnn_iou
 
             self.forward_ret_dict = targets_dict
         
-        return batch_dict
+        return batch_dict        

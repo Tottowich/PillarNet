@@ -178,25 +178,18 @@ class CenterHead(nn.Module):
         share_conv_channel=64,
         num_hm_conv=2,
         dcn_head=False,
-        order_class_names=None,
-        **kwargs
     ):
         super(CenterHead, self).__init__()
 
-        self.num_classes = [len(t["class_names"]) for t in tasks]
+        num_classes = [len(t["class_names"]) for t in tasks]
         self.class_names = [t["class_names"] for t in tasks]
         self.task_strides = [str(t.stride) for t in tasks]
         self.code_weights = code_weights 
         self.weight = weight  # weight between hm loss and loc loss
         self.dataset = dataset
-        self.in_channels = in_channels
 
-        self.class_id_mapping_each_head = []
-        for cur_class_names in self.class_names:
-            cur_class_id_mapping = torch.tensor(
-                [order_class_names.index(x) for x in cur_class_names],
-                dtype=torch.int64).cuda()
-            self.class_id_mapping_each_head.append(cur_class_id_mapping)
+        self.in_channels = in_channels
+        self.num_classes = num_classes
 
         self.crit = FastFocalLoss()
         self.crit_reg = RegLoss()
@@ -211,7 +204,7 @@ class CenterHead(nn.Module):
         self.logger = logger
 
         logger.info(
-            f"num_classes: {self.num_classes}"
+            f"num_classes: {num_classes}"
         )
 
         # a shared convolution 
@@ -228,7 +221,7 @@ class CenterHead(nn.Module):
         if dcn_head:
             print("Use Deformable Convolution in the CenterHead!")
 
-        for num_cls in self.num_classes:
+        for num_cls in num_classes:
             heads = copy.deepcopy(common_heads)
             if not dcn_head:
                 heads.update(dict(hm=(num_cls, num_hm_conv)))
@@ -390,7 +383,6 @@ class CenterHead(nn.Module):
             batch_dim = torch.exp(preds_dict['dim'])
             if 'iou' in preds_dict.keys():
                 batch_iou = (preds_dict['iou'].squeeze(dim=-1) + 1) * 0.5
-                batch_iou = batch_iou.type_as(batch_dim)
             else:
                 batch_iou = torch.ones((batch_hm.shape[0], batch_hm.shape[1], batch_hm.shape[2]),
                                         dtype=batch_dim.dtype).to(batch_hm.device)
@@ -488,8 +480,10 @@ class CenterHead(nn.Module):
                 if k in ["box3d_lidar", "scores"]:
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
                 elif k in ["label_preds"]:
-                    for j, cur_class_id_mapping in enumerate(self.class_id_mapping_each_head):
-                        rets[j][i][k] = cur_class_id_mapping[rets[j][i][k]]
+                    flag = 0
+                    for j, num_class in enumerate(self.num_classes):
+                        rets[j][i][k] += flag
+                        flag += num_class
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
 
             ret['metadata'] = metas[0][i]
@@ -519,36 +513,33 @@ class CenterHead(nn.Module):
             labels = labels[mask]
             iou_preds = torch.clamp(iou_preds[mask], min=0, max=1.)
 
-            # map to o
-
             boxes_for_nms = box_preds[:, [0, 1, 2, 3, 4, 5, -1]]
 
             if test_cfg.get('circular_nms', False):
                 centers = boxes_for_nms[:, [0, 1]]
                 boxes = torch.cat([centers, scores.view(-1, 1)], dim=1)
                 selected = _circle_nms(boxes, min_radius=test_cfg.min_radius[task_id],
-                                       post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                                       post_max_size=test_cfg.nms.nms_post_max_size)
 
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_rotate_nms', False):
-                assert isinstance(test_cfg.rectifier,float)
                 scores = torch.pow(scores, 1-test_cfg.rectifier) * torch.pow(iou_preds, test_cfg.rectifier)
                 selected = box_torch_ops.rotate_nms_pcdet(boxes_for_nms.float(), scores.float(),
-                                                          thresh=test_cfg.nms.nms_iou_threshold[task_id],
-                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
-                                                          post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                                                          thresh=test_cfg.nms.nms_iou_threshold,
+                                                          pre_maxsize=test_cfg.nms.nms_pre_max_size,
+                                                          post_max_size=test_cfg.nms.nms_post_max_size)
                 selected_boxes = box_preds[selected]
                 selected_scores = scores[selected]
                 selected_labels = labels[selected]
             elif test_cfg.nms.get('use_multi_class_nms', False):
                 selected_boxes, selected_scores, selected_labels = box_torch_ops.rotate_class_specific_nms_pcdet(
                     boxes_for_nms.float(), scores.float(), iou_preds, box_preds, labels, num_class,
-                    test_cfg.rectifier[task_id],
-                    thresh=test_cfg.nms.nms_iou_threshold[task_id],
-                    pre_maxsize=test_cfg.nms.nms_pre_max_size[task_id],
-                    post_max_size=test_cfg.nms.nms_post_max_size[task_id])
+                    test_cfg.rectifier,
+                    thresh=test_cfg.nms.nms_iou_threshold,
+                    pre_maxsize=test_cfg.nms.nms_pre_max_size,
+                    post_max_size=test_cfg.nms.nms_post_max_size)
             else:
                 raise NotImplementedError
 

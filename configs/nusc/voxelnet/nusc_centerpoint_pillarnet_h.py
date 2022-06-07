@@ -55,7 +55,6 @@ model = dict(
         common_heads={'reg': (2, 2), 'height': (1, 2), 'dim':(3, 2), 'rot':(2, 2), 'vel': (2, 2)},
         share_conv_channel=64,
         dcn_head=False,
-        order_class_names=class_names
     ),
 )
 
@@ -177,8 +176,8 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=12,
+    samples_per_gpu=1,
+    workers_per_gpu=6,
     train=dict(
         type=dataset_type,
         root_path=data_root,

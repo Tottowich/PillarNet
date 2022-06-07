@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from det3d.core.bbox import box_torch_ops
 from .target_assigner.proposal_target_layer import ProposalTargetLayer
-from det3d.ops.iou3d_nms.iou3d_nms_utils import boxes_aligned_iou3d_gpu
 
 def limit_period(val, offset=0.5, period=np.pi):
     return val - torch.floor(val / period + offset) * period
@@ -85,6 +84,7 @@ class RoIHeadTemplate(nn.Module):
 
         gt_of_rois[:, :, 6] = heading_label
 
+
         targets_dict['gt_of_rois'] = gt_of_rois
         return targets_dict
 
@@ -140,61 +140,12 @@ class RoIHeadTemplate(nn.Module):
         tb_dict = {'rcnn_loss_cls': rcnn_loss_cls.detach()}
         return rcnn_loss_cls, tb_dict
 
-    def get_box_iou_layer_loss(self, forward_ret_dict):
-        loss_cfgs = self.model_cfg.LOSS_CONFIG
-        code_size = forward_ret_dict['rcnn_reg'].shape[-1]
-        rois = forward_ret_dict['rois']  # (B, N, 7+C)
-        reg_valid_mask = forward_ret_dict['reg_valid_mask'].view(-1)
-        gt_of_rois_src = forward_ret_dict['gt_of_rois_src'][..., 0:code_size].view(-1, code_size)
-        rcnn_reg = forward_ret_dict['rcnn_reg'].clone().detach()  # (rcnn_batch_size, C)
-        rcnn_batch_size = rcnn_reg.view(-1, code_size).shape[0]
-        rcnn_iou = forward_ret_dict['rcnn_iou']
-
-        if rcnn_iou is None: return 0, dict()
-        batch_size = rois.shape[0]
-
-        rcnn_reg = rcnn_reg.view(batch_size, -1, code_size)
-
-        roi_ry = rois[:, :, 6].view(-1)
-        roi_xyz = rois[:, :, 0:3].view(-1, 3)
-
-        local_rois = rois.clone().detach()
-        local_rois[:, :, 0:3] = 0
-
-        batch_box_preds = (rcnn_reg + local_rois).view(-1, code_size)
-        batch_box_preds = box_torch_ops.rotate_points_along_z(
-            batch_box_preds.unsqueeze(dim=1), roi_ry
-        ).squeeze(dim=1)
-
-        batch_box_preds[:, 0:3] += roi_xyz
-        batch_box_preds = batch_box_preds.view(rcnn_batch_size, code_size)
-
-        fg_mask = (reg_valid_mask > 0)
-        fg_sum = fg_mask.long().sum().item()
-
-        tb_dict = {}
-
-        targets = boxes_aligned_iou3d_gpu(batch_box_preds, gt_of_rois_src)
-        targets = 2 * targets - 1
-
-        rcnn_loss_iou = F.l1_loss(rcnn_iou, targets, reduction='none')
-
-        rcnn_loss_iou = (rcnn_loss_iou.view(rcnn_batch_size, -1) * fg_mask.unsqueeze(dim=-1).float()).sum() / max(fg_sum, 1)
-        rcnn_loss_iou = rcnn_loss_iou * loss_cfgs.LOSS_WEIGHTS['rcnn_iou_weight']
-        tb_dict['rcnn_loss_iou'] = rcnn_loss_iou.detach()
-
-        return rcnn_loss_iou, tb_dict
-
     def get_loss(self, tb_dict=None):
         tb_dict = {} if tb_dict is None else tb_dict
         rcnn_loss = 0
         rcnn_loss_cls, cls_tb_dict = self.get_box_cls_layer_loss(self.forward_ret_dict)
         rcnn_loss += rcnn_loss_cls
         tb_dict.update(cls_tb_dict)
-
-        rcnn_loss_iou, iou_tb_dict = self.get_box_iou_layer_loss(self.forward_ret_dict)
-        rcnn_loss += rcnn_loss_iou
-        tb_dict.update(iou_tb_dict)
 
         rcnn_loss_reg, reg_tb_dict = self.get_box_reg_layer_loss(self.forward_ret_dict)
         rcnn_loss += rcnn_loss_reg
