@@ -206,7 +206,6 @@ def build_dbsampler(cfg, logger=None):
     prepors = [build_db_preprocess(c, logger=logger) for c in cfg.db_prep_steps]
     db_prepor = DataBasePreprocessor(prepors)
     rate = cfg.rate
-    extra_scale = cfg.extra_scale
     grot_range = cfg.global_random_rotation_range_per_object
     groups = cfg.sample_groups
     # groups = [dict(g.name_to_max_num) for g in groups]
@@ -217,7 +216,7 @@ def build_dbsampler(cfg, logger=None):
     if len(grot_range) == 0:
         grot_range = None
     sampler = DataBaseSamplerV2(
-        db_infos, groups, db_prepor, rate, grot_range, extra_scale, logger=logger
+        db_infos, groups, db_prepor, rate, grot_range, logger=logger
     )
 
     return sampler

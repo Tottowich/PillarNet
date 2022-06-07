@@ -516,7 +516,7 @@ class RPNV2(nn.Module):
 
         self.deblock_4 = Sequential(
             nn.ZeroPad2d(1),
-            nn.Conv2d(self._num_filters[0], self._num_upsample_filters[0], 3, stride=1, bias=False),
+            nn.Conv2d(self._num_input_features[0], self._num_upsample_filters[0], 3, stride=1, bias=False),
             build_norm_layer(self._norm_cfg, self._num_upsample_filters[0])[1],
             nn.ReLU(),
         )

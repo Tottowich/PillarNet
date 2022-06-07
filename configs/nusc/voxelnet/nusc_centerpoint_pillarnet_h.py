@@ -41,7 +41,7 @@ model = dict(
         ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
         us_num_filters=[128, 128],
-        num_input_features=[256, 256],
+        num_input_features=[128, 256],
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
@@ -176,7 +176,7 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=1,
+    samples_per_gpu=4,
     workers_per_gpu=6,
     train=dict(
         type=dataset_type,

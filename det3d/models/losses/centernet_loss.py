@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from det3d.core.utils.center_utils import _transpose_and_gather_feat, \
-  bbox3d_overlaps_iou, bbox3d_overlaps_diou, bbox3d_overlaps_giou, \
-  bboxes_overlaps_ciou, bboxes_overlaps_cdiou, bboxes_overlaps_ciou_bev
+  bbox3d_overlaps_iou, bbox3d_overlaps_diou, bbox3d_overlaps_giou
 from det3d.ops.iou3d_nms.iou3d_nms_utils import boxes_aligned_iou3d_gpu
 from det3d.models.losses.odious import bbox3d_overlaps_odiou
 
@@ -42,6 +41,8 @@ class IouLoss(nn.Module):
     super(IouLoss, self).__init__()
 
   def forward(self, iou_pred, mask, ind, box_pred, box_gt):
+    if mask.sum() == 0:
+      return iou_pred.new_eros((1))
     mask = mask.bool()
     pred = _transpose_and_gather_feat(iou_pred, ind)[mask]
     pred_box = _transpose_and_gather_feat(box_pred, ind)
@@ -71,39 +72,12 @@ class IouRegLoss(nn.Module):
       self.bbox3d_iou_func = bbox3d_overlaps_giou
     elif type == "DIoU":
       self.bbox3d_iou_func = bbox3d_overlaps_diou
-    elif type == "ODIoU":
-      self.bbox3d_iou_func = bbox3d_overlaps_odiou
     else:
       raise NotImplementedError
 
   def forward(self, box_pred, mask, ind, box_gt):
-    mask = mask.bool()
-    pred_box = _transpose_and_gather_feat(box_pred, ind)
-    iou = self.bbox3d_iou_func(pred_box[mask], box_gt[mask])
-    loss = (1. - iou).sum() / (mask.sum() + 1e-4)
-    return loss
-
-
-class CIouRegLoss(nn.Module):
-  '''cylinder CIoU loss for output boxes
-    Arguments:
-      output (batch x dim x h x w)
-      mask (batch x max_objects)
-      ind (batch x max_objects)
-      target (batch x max_objects x dim)
-  '''
-
-  def __init__(self, type="IoU"):
-    super(CIouRegLoss, self).__init__()
-
-    if type == "CIoU":
-      self.bbox3d_iou_func = bboxes_overlaps_ciou_bev
-    elif type == "CDIoU":
-      self.bbox3d_iou_func = bboxes_overlaps_cdiou
-    else:
-      raise NotImplementedError
-
-  def forward(self, box_pred, mask, ind, box_gt):
+    if mask.sum() == 0:
+      return box_pred.new_eros((1))
     mask = mask.bool()
     pred_box = _transpose_and_gather_feat(box_pred, ind)
     iou = self.bbox3d_iou_func(pred_box[mask], box_gt[mask])

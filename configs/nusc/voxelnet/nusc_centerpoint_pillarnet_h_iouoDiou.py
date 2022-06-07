@@ -25,7 +25,7 @@ model = dict(
     pretrained=None,
     reader=dict(type="Identity", pc_range=[-54, -54, -5.0, 54, 54, 3.0], num_input_features=2),
     backbone=dict(
-        type="SpMiddlePillarEncoder18HA", ds_factor=8, double=2,
+        type="SpMiddlePillarEncoderHA", ds_factor=8, double=2,
         pc_range=[-54, -54, -5.0, 54, 54, 3.0],
         pillar_cfg=dict(
             pool0=dict(bev=0.075 / 2),
@@ -39,7 +39,7 @@ model = dict(
         ds_num_filters=[256, 256],
         us_layer_strides=[1, 2],
         us_num_filters=[128, 128],
-        num_input_features=[256, 256],
+        num_input_features=[128, 256],
         logger=logging.getLogger("RPN"),
     ),
     dense_head=dict(
@@ -127,8 +127,8 @@ db_sampler = dict(
     ],
     global_random_rotation_range_per_object=[0, 0],
     rate=1.0,
-    extra_scale=1.2
 )
+
 train_preprocessor = dict(
     mode="train",
     shuffle_points=True,
@@ -174,7 +174,7 @@ val_anno = "data/nuScenes/infos_val_10sweeps_withvelo_filter_True.pkl"
 test_anno = None
 
 data = dict(
-    samples_per_gpu=4,
+    samples_per_gpu=2,
     workers_per_gpu=6,
     train=dict(
         type=dataset_type,
