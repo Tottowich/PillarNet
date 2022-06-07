@@ -1,5 +1,6 @@
 import logging
 import pickle
+import numpy as np
 from functools import partial
 
 import det3d.core.sampler.preprocess as prep
