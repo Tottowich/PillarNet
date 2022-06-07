@@ -55,6 +55,11 @@ In contrast with our used codebase [CenterPoint](https://github.com/tianweiy/Cen
 det3d/ops/pillar_ops  (lossless pillarization from raw point clouds)
 det3d/models/backbones/pcn.py (backbone for PillarNet)
 ```
+**Note:**
+
+- we also reduce the channel of conv4 from 256 to 128 and find the similar performance. 
+
+  Thus, further work will be to search a better combination of conv block numbers and its feature channels in each stage using NAS.
 
 
 
